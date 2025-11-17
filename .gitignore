@@ -37,3 +37,5 @@ dist/
 .envrc
 flake.nix
 flake.lock
+
+frontend/.yarn
