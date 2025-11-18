@@ -55,6 +55,9 @@ pkgs.mkShell {
 
     pkgs.ruff
     pkgs.nixfmt-tree
+
+    pkgs.process-compose
+    pkgs.docker-client
   ];
 
   env = {
