@@ -1,0 +1,136 @@
+version: "0.5"
+
+log_level: info
+
+processes:
+  pull-postgres-image:
+    command: "docker pull postgres"
+    description: "Pull PostgreSQL Docker image"
+    availability:
+      restart: "no"
+    log_location: "./logs/pull-postgres-image.log"
+
+  pull-redis-image:
+    command: "docker pull redis:6-alpine"
+    description: "Pull Redis Docker image"
+    availability:
+      restart: "no"
+    log_location: "./logs/pull-redis-image.log"
+
+  postgres:
+    command: "docker run --rm -p 127.0.0.1:5432:5432 --name lms-postgres -e POSTGRES_USER=csc -e POSTGRES_DB=cscdb -e POSTGRES_PASSWORD=FooBar postgres"
+    description: "PostgreSQL database server"
+    depends_on:
+      pull-postgres-image:
+        condition: process_completed_successfully
+    availability:
+      restart: "on_failure"
+      backoff_seconds: 2
+      max_restarts: 3
+    ready_log_line: "database system is ready to accept connections"
+    log_location: "./logs/postgres.log"
+    shutdown:
+      command: "docker stop lms-postgres"
+      timeout_seconds: 10
+      signal: 15
+
+  redis:
+    command: "docker run --rm -p 127.0.0.1:6379:6379 --name lms-redis redis:6-alpine redis-server --appendonly yes"
+    description: "Redis cache server"
+    depends_on:
+      pull-redis-image:
+        condition: process_completed_successfully
+    availability:
+      restart: "on_failure"
+      backoff_seconds: 2
+      max_restarts: 3
+    ready_log_line: "Ready to accept connections"
+    log_location: "./logs/redis.log"
+    shutdown:
+      command: "docker stop lms-redis"
+      timeout_seconds: 10
+      signal: 15
+
+  frontend-install:
+    command: "yarn install"
+    description: "Install frontend dependencies"
+    working_dir: "./frontend"
+    availability:
+      restart: "no"
+    log_location: "./logs/frontend-install.log"
+
+  frontend-build-css:
+    command: "yarn run build:css"
+    description: "Build frontend CSS"
+    working_dir: "./frontend"
+    depends_on:
+      frontend-install:
+        condition: process_completed_successfully
+    availability:
+      restart: "no"
+    log_location: "./logs/frontend-build-css.log"
+
+  frontend-build:
+    command: "yarn run local:1"
+    description: "Build frontend assets"
+    working_dir: "./frontend"
+    depends_on:
+      frontend-build-css:
+        condition: process_completed_successfully
+    availability:
+      restart: "no"
+    log_location: "./logs/frontend-build.log"
+
+  collectstatic:
+    command: "ENV_FILE=.env python manage.py collectstatic --noinput --ignore 'webpack-stats-v*.json'"
+    description: "Collect Django static files"
+    depends_on:
+      frontend-build:
+        condition: process_completed_successfully
+    availability:
+      restart: "no"
+    log_location: "./logs/collectstatic.log"
+
+  migrate:
+    command: "ENV_FILE=.env python manage.py migrate"
+    description: "Run database migrations"
+    depends_on:
+      postgres:
+        condition: process_log_ready
+      redis:
+        condition: process_log_ready
+    availability:
+      restart: "no"
+    log_location: "./logs/migrate.log"
+
+  django:
+    command: "ENV_FILE=.env python manage.py runserver localhost:8001"
+    description: "Django development server"
+    depends_on:
+      postgres:
+        condition: process_log_ready
+      redis:
+        condition: process_log_ready
+      migrate:
+        condition: process_completed_successfully
+      collectstatic:
+        condition: process_completed_successfully
+    availability:
+      restart: "on_failure"
+      backoff_seconds: 3
+      max_restarts: 5
+    readiness_probe:
+      http_get:
+        host: localhost
+        scheme: http
+        port: 8001
+        path: "/"
+      initial_delay_seconds: 5
+      period_seconds: 5
+      timeout_seconds: 3
+      success_threshold: 1
+      failure_threshold: 3
+    log_location: "./logs/django.log"
+    shutdown:
+      signal: 15
+      timeout_seconds: 30

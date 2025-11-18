@@ -8,6 +8,7 @@ db.sqlite3
 static/
 media/
 docs/
+logs/
 
 **/.env
 **/.DS_Store

@@ -18,7 +18,7 @@ with warnings.catch_warnings():
 
 ROOT_DIR = Path(__file__).parents[2]
 ROOT_URLCONF = 'lms.urls'
-SHARED_APPS_DIR = ROOT_DIR / "apps"
+SHARED_APPS_DIR = ROOT_DIR / "lms" / "apps"
 
 SITE_ID = env.int("SITE_ID", default=None)
 
