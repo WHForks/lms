@@ -65,7 +65,12 @@ const common = {
       },
       {
         test: /\.tsx?$/,
-        use: 'ts-loader',
+        use: {
+          loader: "ts-loader",
+          options: {
+            configFile: path.resolve(__dirname, "../tsconfig.build.json"),
+          },
+        },
         include: path.resolve(__srcdir, 'js'),
       },
       {
