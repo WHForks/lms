@@ -7,16 +7,19 @@
 
 }:
 let
-  inherit
-    (import ./nix/mkPython.nix {
-      inherit
-        pkgs
-        pyproject-nix
-        ;
-      root = ./.;
-    })
-    pythonBase
-    ;
+  project = pyproject-nix.lib.project.loadPyproject {
+    projectRoot = ./.;
+  };
+  python = pkgs.python3.override {
+    packageOverrides = import ./nix/overrides.nix {
+      inherit (pkgs) stdenv fetchFromGitHub;
+    };
+  };
+  pythonBase = python.withPackages (
+    project.renderers.withPackages {
+      inherit python;
+    }
+  );
   virtualenv = pythonBase;
 in
 {
