@@ -18,6 +18,7 @@ let
   pythonBase = python.withPackages (
     project.renderers.withPackages {
       inherit python;
+      groups = [ "dev" ];
     }
   );
   virtualenv = pythonBase;
@@ -27,7 +28,7 @@ in
     docker = pkgs.dockerTools.buildLayeredImage {
       name = "lms-docker-image";
       contents = [
-        virtualenv
+        (python.withPackages (project.renderers.withPackages { inherit python; }))
       ];
       config = {
         Cmd = [ "/bin/bash" ];
@@ -56,10 +57,10 @@ in
       UV_NO_SYNC = "1";
       UV_PYTHON = pythonBase.python.interpreter;
       UV_PYTHON_DOWNLOADS = "never";
+      PYTHONPATH = toString ./lms/apps;
     };
     shellHook = ''
-      unset PYTHONPATH
-      export REPO_ROOT=$(git rev-parse --show-toplevel)
+      ln -snf ${pythonBase} .python-env
     '';
   };
 }

@@ -145,6 +145,22 @@ self: super: {
     }";
   };
 
+  pytest-pythonpath = self.buildPythonPackage rec {
+    pname = "pytest-pythonpath";
+    version = "0.7.3";
+    pyproject = true;
+
+    build-system = [ self.setuptools ];
+    dependencies = with self; [ pytest ];
+
+    src = fetchFromGitHub {
+      owner = "ericpalakovichcarr";
+      repo = "pytest-pythonpath";
+      tag = version;
+      hash = "sha256-AE4Nqbmr2zlhD8Gqlu/U/N6dZPnWZwkePn2Ap9uegbQ=";
+    };
+  };
+
   rest-pandas = self.buildPythonPackage rec {
     pname = "rest-pandas";
     version = "1.1.0";
