@@ -1,4 +1,4 @@
-{ stdenv, fetchFromGitHub, ... }:
+{ fetchFromGitHub, ... }:
 self: super: {
   django-bitfield = self.buildPythonPackage rec {
     pname = "django-bitfield";
@@ -123,26 +123,6 @@ self: super: {
       inherit pname version;
       hash = "sha256-tl8nuNXeU/aVo5dDgze+iCpse12NMDM6TPmMkjn+C4Y=";
     };
-  };
-
-  hoep = self.buildPythonPackage {
-    pname = "hoep";
-    version = "2.0.2";
-    pyproject = true;
-
-    build-system = [ super.setuptools ];
-
-    src = fetchFromGitHub {
-      owner = "pacahon";
-      repo = "Hoep";
-      rev = "0d4c0507dcb34d1b63a099c8b08656b66394bc37";
-      hash = "sha256-oYgtdD4jvV+Lq+6tOz/9s/8m9Qn+eKggI/0mqDZxXrA=";
-      fetchSubmodules = true;
-    };
-
-    env.NIX_CFLAGS_COMPILE = "-Wno-error=${
-      if stdenv.cc.isClang then "incompatible-function-pointer-types" else "incompatible-pointer-types"
-    }";
   };
 
   pytest-pythonpath = self.buildPythonPackage rec {

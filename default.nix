@@ -12,7 +12,7 @@ let
   };
   python = pkgs.python3.override {
     packageOverrides = import ./nix/overrides.nix {
-      inherit (pkgs) stdenv fetchFromGitHub;
+      inherit (pkgs) fetchFromGitHub;
     };
   };
   pythonBase = python.withPackages (
