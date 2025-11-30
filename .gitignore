@@ -20,6 +20,7 @@ local/
 coverage_html/
 .coverage
 .env
+.env.local
 docker-compose.override.yml
 # TODO: replace public/ with submodule, add to ignore here
 *-debug.log

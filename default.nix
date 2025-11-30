@@ -4,13 +4,26 @@
   pkgs ? import sources.nixpkgs { inherit system; },
   lib ? pkgs.lib,
   pyproject-nix ? import sources.pyproject-nix { inherit lib; },
-
 }:
 let
+  src = lib.fileset.toSource {
+    root = ./.;
+    fileset = lib.fileset.unions (
+      map (path: ./. + path) [
+        "/pyproject.toml"
+        "/lms/"
+        "/conftest.py"
+        "/manage.py"
+        "/pytest.ini"
+        "/README.md"
+        "/locale"
+      ]
+    );
+  };
   project = pyproject-nix.lib.project.loadPyproject {
     projectRoot = ./.;
   };
-  python = pkgs.python3.override {
+  python = pkgs.python312.override {
     packageOverrides = import ./nix/overrides.nix {
       inherit (pkgs) fetchFromGitHub;
     };
@@ -21,29 +34,37 @@ let
       groups = [ "dev" ];
     }
   );
-  virtualenv = pythonBase;
+  productionEnv = python.withPackages (project.renderers.withPackages { inherit python; });
+  frontendAssets = pkgs.callPackage ./nix/frontend.nix {
+    root = ./frontend;
+  };
+  compiledMessages = pkgs.callPackage ./nix/compiled-messages.nix {
+    inherit src;
+    pythonEnv = productionEnv;
+  };
+  staticAssets = pkgs.callPackage ./nix/static-assets.nix {
+    inherit src frontendAssets compiledMessages;
+    pythonEnv = productionEnv;
+  };
 in
 {
   packages = {
-    docker = pkgs.dockerTools.buildLayeredImage {
-      name = "lms-docker-image";
-      contents = [
-        (python.withPackages (project.renderers.withPackages { inherit python; }))
-      ];
-      config = {
-        Cmd = [ "/bin/bash" ];
-      };
-    };
-    frontend = pkgs.callPackage ./nix/frontend.nix {
-      root = ./frontend;
+    inherit frontendAssets compiledMessages staticAssets;
+    docker = pkgs.callPackage ./nix/docker.nix {
+      inherit
+        src
+        productionEnv
+        frontendAssets
+        staticAssets
+        ;
     };
   };
   shell = pkgs.mkShell {
     packages = [
-      virtualenv
+      pythonBase
       pkgs.uv
 
-      pkgs.nodejs_20
+      pkgs.nodejs
       pkgs.yarn-berry
 
       pkgs.ruff
