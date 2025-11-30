@@ -26,7 +26,9 @@ stdenvNoCC.mkDerivation (finalAttrs: {
         "/tsconfig.build.json"
         "/webpack/"
         "/src/"
-        "/assets/"
+        "/assets/v1/css/"
+        "/assets/v1/img/"
+        "/assets/v1/js/"
       ]
     );
   };
