@@ -4,10 +4,7 @@
   pkgs ? import sources.nixpkgs { inherit system; },
   lib ? pkgs.lib,
   pyproject-nix ? import sources.pyproject-nix { inherit lib; },
-  uv2nix ? import sources.uv2nix { inherit lib pyproject-nix; },
-  pyproject-build-systems ? import sources.build-system-pkgs {
-    inherit uv2nix pyproject-nix lib;
-  },
+
 }:
 let
   inherit
@@ -15,26 +12,19 @@ let
       inherit
         pkgs
         pyproject-nix
-        uv2nix
-        pyproject-build-systems
         ;
       root = ./.;
     })
-    workspace
     pythonBase
     ;
-  editableOverlay = workspace.mkEditablePyprojectOverlay {
-    root = "$REPO_ROOT";
-  };
-  productionEnv = pythonBase.mkVirtualEnv "lms-prod-env" workspace.deps.default;
-  virtualenv = (pythonBase.overrideScope editableOverlay).mkVirtualEnv "lms-env" workspace.deps.all;
+  virtualenv = pythonBase;
 in
 {
   packages = {
     docker = pkgs.dockerTools.buildLayeredImage {
       name = "lms-docker-image";
       contents = [
-        productionEnv
+        virtualenv
       ];
       config = {
         Cmd = [ "/bin/bash" ];
