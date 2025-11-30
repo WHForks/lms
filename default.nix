@@ -4,37 +4,31 @@
   pkgs ? import sources.nixpkgs { inherit system; },
   lib ? pkgs.lib,
   pyproject-nix ? import sources.pyproject-nix { inherit lib; },
-  uv2nix ? import sources.uv2nix { inherit lib pyproject-nix; },
-  pyproject-build-systems ? import sources.build-system-pkgs {
-    inherit uv2nix pyproject-nix lib;
-  },
+
 }:
 let
-  inherit
-    (import ./nix/mkPython.nix {
-      inherit
-        pkgs
-        pyproject-nix
-        uv2nix
-        pyproject-build-systems
-        ;
-      root = ./.;
-    })
-    workspace
-    pythonBase
-    ;
-  editableOverlay = workspace.mkEditablePyprojectOverlay {
-    root = "$REPO_ROOT";
+  project = pyproject-nix.lib.project.loadPyproject {
+    projectRoot = ./.;
   };
-  productionEnv = pythonBase.mkVirtualEnv "lms-prod-env" workspace.deps.default;
-  virtualenv = (pythonBase.overrideScope editableOverlay).mkVirtualEnv "lms-env" workspace.deps.all;
+  python = pkgs.python3.override {
+    packageOverrides = import ./nix/overrides.nix {
+      inherit (pkgs) stdenv fetchFromGitHub;
+    };
+  };
+  pythonBase = python.withPackages (
+    project.renderers.withPackages {
+      inherit python;
+      groups = [ "dev" ];
+    }
+  );
+  virtualenv = pythonBase;
 in
 {
   packages = {
     docker = pkgs.dockerTools.buildLayeredImage {
       name = "lms-docker-image";
       contents = [
-        productionEnv
+        (python.withPackages (project.renderers.withPackages { inherit python; }))
       ];
       config = {
         Cmd = [ "/bin/bash" ];
@@ -63,10 +57,10 @@ in
       UV_NO_SYNC = "1";
       UV_PYTHON = pythonBase.python.interpreter;
       UV_PYTHON_DOWNLOADS = "never";
+      PYTHONPATH = toString ./lms/apps;
     };
     shellHook = ''
-      unset PYTHONPATH
-      export REPO_ROOT=$(git rev-parse --show-toplevel)
+      ln -snf ${pythonBase} .python-env
     '';
   };
 }
