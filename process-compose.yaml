@@ -18,7 +18,7 @@ processes:
     log_location: "./logs/pull-redis-image.log"
 
   postgres:
-    command: "docker run --rm -p 127.0.0.1:5432:5432 --name lms-postgres -e POSTGRES_USER=csc -e POSTGRES_DB=cscdb -e POSTGRES_PASSWORD=FooBar postgres"
+    command: "docker run --rm -p 127.0.0.1:5432:5432 --name lms-postgres -e POSTGRES_USER=csc -e POSTGRES_DB=cscdb -e POSTGRES_PASSWORD=FooBar -v ./data/postgres:/var/lib/postgresql postgres"
     description: "PostgreSQL database server"
     depends_on:
       pull-postgres-image:
@@ -35,7 +35,7 @@ processes:
       signal: 15
 
   redis:
-    command: "docker run --rm -p 127.0.0.1:6379:6379 --name lms-redis redis:6-alpine redis-server --appendonly yes"
+    command: "docker run --rm -p 127.0.0.1:6379:6379 --name lms-redis -v ./data/redis:/data redis:6-alpine redis-server --appendonly yes"
     description: "Redis cache server"
     depends_on:
       pull-redis-image:

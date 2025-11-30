@@ -10,6 +10,7 @@ media/
 apps/coverage/
 .idea/
 .vscode/
+.zed/
 csc3/
 static/
 local/
@@ -32,6 +33,7 @@ docker-compose.override.yml
 
 node_modules/
 dist/
+/data
 
 .direnv/
 .python-env

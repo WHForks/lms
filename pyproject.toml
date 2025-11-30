@@ -64,7 +64,7 @@ dependencies = [
 
     # Content Processing
     "bleach~=6.1.0",
-    "hoep",
+    "mistune~=3.1.0",
 
     # Data Import/Export
     "django-import-export~=4.0.9",
@@ -117,9 +117,6 @@ package = false
 [[tool.uv.index]]
 name = "pypi"
 url = "https://pypi.org/simple"
-
-[tool.uv.sources]
-hoep = { git = "https://github.com/pacahon/Hoep.git", rev = "0d4c0507dcb34d1b63a099c8b08656b66394bc37" }
 
 [build-system]
 requires = ["hatchling"]
