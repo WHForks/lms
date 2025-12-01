@@ -37,6 +37,7 @@ dist/
 /data
 
 .direnv/
+result
 .python-env
 .envrc
 flake.nix

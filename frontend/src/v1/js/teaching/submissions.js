@@ -1,4 +1,5 @@
 import { showComponentError } from 'utils';
+import * as forms from "components/forms";
 
 let filterAssignmentForm = $('.filters form');
 
@@ -10,17 +11,18 @@ const fn = {
   },
 
   initFiltersForm: function () {
-    import('components/forms')
-      .then(_ => {
-        assignmentSelect.selectpicker({
-          iconBase: 'fa',
-          tickIcon: 'fa-check'
-        });
-        assignmentSelect.on('loaded.bs.select', function (e) {
-          $(this).closest('.filters').find('.loading').remove();
-        });
-      })
-      .catch(error => showComponentError(error));
+    try {
+      forms.initSelectPickers();
+      assignmentSelect.selectpicker({
+        iconBase: "fa",
+        tickIcon: "fa-check",
+      });
+      assignmentSelect.on("loaded.bs.select", function (e) {
+        $(this).closest(".filters").find(".loading").remove();
+      });
+    } catch (error) {
+      showComponentError(error);
+    }
 
     // TODO: simplify
     filterAssignmentForm.on('submit', function () {
@@ -31,7 +33,7 @@ const fn = {
       window.location = filterAssignmentForm.attr('action') + selectedAssignments;
       return false;
     });
-  }
+  },
 };
 
 export default fn;

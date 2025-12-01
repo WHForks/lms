@@ -62,9 +62,7 @@
       </div>
     </div>
 
-    {{ render_bundle('vendor', config='V1', extension='js') }}
-    {{ render_bundle('main', config='V1', extension='js') }}
-
+    {{ render_bundle('app', config='V1', extension='js') }}
     {% block javascripts %}{% endblock javascripts %}
   </body>
 </html>

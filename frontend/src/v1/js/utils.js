@@ -16,7 +16,7 @@ export function getCSRFToken() {
 }
 
 export function getTemplate(id) {
-  return template(document.getElementById(id).innerHTML);
+  return template(document.getElementById(id)?.innerHTML??"");
 }
 
 export function createNotification(msg, theme = 'default', options = {}) {
@@ -40,13 +40,9 @@ export function getSections() {
 }
 
 export function loadReactApplications() {
-  let reactApps = document.querySelectorAll('.__react-app');
+  let reactApps = document.querySelectorAll(".__react-app");
   if (reactApps.length > 0) {
-    import(/* webpackChunkName: "react" */ 'react_app')
-      .then(m => {
-        Array.from(reactApps).forEach(m.renderComponent);
-      })
-      .catch(error => showComponentError(error));
+    Array.from(reactApps).forEach(renderComponent);
   }
 }
 
