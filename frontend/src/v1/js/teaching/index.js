@@ -1,4 +1,9 @@
 import { showComponentError, getSections } from 'utils';
+import studentAssignment from "teaching/studentAssignment";
+import studentGroups from "teaching/studentGroups";
+import gradebook from "teaching/gradebook";
+import submissions from "teaching/submissions";
+import assignmentForm from "teaching/assignmentForm";
 
 $(document).ready(function () {
   let sections = getSections();
@@ -9,41 +14,37 @@ $(document).ready(function () {
     defaultWhiteList.dt = [];
     $('[data-toggle="tooltip"]').tooltip();
   }
-  if (sections.includes('studentAssignment')) {
-    import(/* webpackChunkName: "gradebook" */ 'teaching/studentAssignment')
-      .then(module => {
-        const component = module.default;
-        component.launch();
-      })
-      .catch(error => showComponentError(error));
-  } else if (sections.includes('studentGroups')) {
-    import(/* webpackChunkName: "studentGroups" */ 'teaching/studentGroups')
-      .then(module => {
-        const launch = module.default;
-        launch();
-      })
-      .catch(error => showComponentError(error));
+  if (sections.includes("studentAssignment")) {
+    try {
+      studentAssignment.launch();
+    } catch (error) {
+      showComponentError(error);
+    }
+  } else if (sections.includes("studentGroups")) {
+    try {
+      studentGroups();
+    } catch (error) {
+      showComponentError(error);
+    }
   }
 
-  if (sections.includes('gradebook')) {
-    import(/* webpackChunkName: "gradebook" */ 'teaching/gradebook')
-      .then(module => {
-        const component = module.default;
-        component.launch();
-      })
-      .catch(error => showComponentError(error));
-  } else if (sections.includes('submissions')) {
-    import(/* webpackChunkName: "submissions" */ 'teaching/submissions')
-      .then(m => {
-        const component = m.default;
-        component.launch();
-      })
-      .catch(error => showComponentError(error));
-  } else if (sections.includes('assignmentForm')) {
-    import(/* webpackChunkName: "assignmentForm" */ 'teaching/assignmentForm')
-      .then(m => {
-        m.default();
-      })
-      .catch(error => showComponentError(error));
+  if (sections.includes("gradebook")) {
+    try {
+      gradebook.launch();
+    } catch (error) {
+      showComponentError(error);
+    }
+  } else if (sections.includes("submissions")) {
+    try {
+      submissions.launch();
+    } catch (error) {
+      showComponentError(error);
+    }
+  } else if (sections.includes("assignmentForm")) {
+    try {
+      assignmentForm();
+    } catch (error) {
+      showComponentError(error);
+    }
   }
 });

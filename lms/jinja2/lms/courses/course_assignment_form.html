@@ -4,9 +4,7 @@
 
 {% block body_attrs %} data-init-sections="assignmentForm,tooltips,datetimepickers,selectpickers"{% endblock body_attrs %}
 
-{% block javascripts %}
-  {{ render_bundle('teaching', config='V1', extension='js') }}
-{% endblock javascripts %}
+{% block javascripts %}{% endblock javascripts %}
 
 {% block content %}
   {% set assignment = assignment_form.instance %}

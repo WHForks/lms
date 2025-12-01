@@ -1,4 +1,5 @@
 import { getTemplate, showComponentError } from 'utils';
+import * as forms from "components/forms";
 
 const MESSAGES = {
   term: 'Semester: '
@@ -121,14 +122,15 @@ function updateDOM(eventData, termSlug, academicYear, selectedTerm) {
 
 export function launch() {
   courseOfferingsList();
-  import('components/forms')
-    .then(m => {
-      $('.__courses-filter--academic-year select').selectpicker({
-        showTick: false,
-        iconBase: 'fa',
-        tickIcon: 'fa-check',
-        width: 'fit'
-      });
-    })
-    .catch(error => showComponentError(error));
+  try {
+    forms.initSelectPickers();
+    $(".__courses-filter--academic-year select").selectpicker({
+      showTick: false,
+      iconBase: "fa",
+      tickIcon: "fa-check",
+      width: "fit",
+    });
+  } catch (error) {
+    showComponentError(error);
+  }
 }

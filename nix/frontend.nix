@@ -24,7 +24,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
         "/babel.config.js"
         "/tsconfig.json"
         "/tsconfig.build.json"
-        "/webpack/"
+        "/vite.config.ts"
         "/src/"
         "/assets/v1/css/"
         "/assets/v1/img/"
@@ -36,7 +36,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   missingHashes = "${root}/missing-hashes.json";
   offlineCache = yarn-berry.fetchYarnBerryDeps {
     inherit (finalAttrs) src missingHashes;
-    hash = "sha256-Qc/kmS/L+Y4e3i1YRlhmQZEtB88JA+t5/5BMQVnZ/UQ=";
+    hash = "sha256-pef5cjkPke8+oZyi5zQ6AOgGvOcMvJZ5afG6Oh3x7hw=";
   };
 
   nativeBuildInputs = [

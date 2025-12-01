@@ -81,8 +81,5 @@ in
       UV_PYTHON_DOWNLOADS = "never";
       PYTHONPATH = toString ./lms/apps;
     };
-    shellHook = ''
-      ln -snf ${pythonBase} .python-env
-    '';
   };
 }

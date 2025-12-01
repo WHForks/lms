@@ -1,5 +1,6 @@
 import { getTemplate, showComponentError } from 'utils';
 import { createNotification } from '../utils';
+import * as forms from "components/forms";
 import { FormValidation } from 'components/formValidator';
 import { format } from 'date-fns/fp';
 import { utcToZonedTime } from 'date-fns-tz';
@@ -89,13 +90,13 @@ function initAssigneeForm() {
 const fn = {
   launch: function () {
     initAssigneeForm();
-    import('components/forms')
-      .then(m => {
-        m.initSelectPickers();
-      })
-      .catch(error => showComponentError(error));
+    try {
+      forms.initSelectPickers();
+    } catch (error) {
+      showComponentError(error);
+    }
     initAssignmentScoreAuditLog();
-  }
+  },
 };
 
 export default fn;

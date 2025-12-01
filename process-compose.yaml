@@ -59,23 +59,12 @@ processes:
       restart: "no"
     log_location: "./logs/frontend-install.log"
 
-  frontend-build-css:
-    command: "yarn run build:css"
-    description: "Build frontend CSS"
-    working_dir: "./frontend"
-    depends_on:
-      frontend-install:
-        condition: process_completed_successfully
-    availability:
-      restart: "no"
-    log_location: "./logs/frontend-build-css.log"
-
   frontend-build:
     command: "yarn run local:1"
     description: "Build frontend assets"
     working_dir: "./frontend"
     depends_on:
-      frontend-build-css:
+      frontend-install:
         condition: process_completed_successfully
     availability:
       restart: "no"
@@ -104,7 +93,7 @@ processes:
     log_location: "./logs/migrate.log"
 
   django:
-    command: "python manage.py runserver localhost:8001"
+    command: "python manage.py runserver 0.0.0.0:8001"
     description: "Django development server"
     depends_on:
       postgres:
