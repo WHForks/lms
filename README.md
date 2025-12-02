@@ -32,32 +32,12 @@ LMS_DOMAIN=localhost
 SITE_ID=1
 ```
 
-### Prepare static files for serving
+### Run process compose for local development
+
+Run `process-compose` with the `.env` file you created to build frontend, run migrations and start the development server:
 
 ```
-ENV_FILE=.env python manage.py collectstatic --noinput --ignore "webpack-stats-v*.json"
-```
-
-### Initialize the database
-
-Start PostgreSQL in a docker container:
-
-```
-docker run -d -p 127.0.0.1:5432:5432 --name lms-postgres -e POSTGRES_USER=csc -e POSTGRES_DB=cscdb -e POSTGRES_PASSWORD=FooBar postgres
-```
-
-Start Redis in Docker container:
-
-```
-docker run -d -p 127.0.0.1:6379:6379 --name lms-redis redis:6-alpine redis-server --appendonly yes
-```
-
-and apply migrations, that essentially create and initialize the database: `ENV_FILE=.env python ./manage.py migrate`
-
-### Run the backend in development mode
-
-```
-ENV_FILE=.env python manage.py runserver localhost:8001
+ENV_FILE=.env process-compose up
 ```
 
 ### Run tests

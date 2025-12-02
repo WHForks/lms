@@ -82,7 +82,7 @@ processes:
     log_location: "./logs/frontend-build.log"
 
   collectstatic:
-    command: "ENV_FILE=.env python manage.py collectstatic --noinput --ignore 'webpack-stats-v*.json'"
+    command: "python manage.py collectstatic --noinput --ignore 'webpack-stats-v*.json'"
     description: "Collect Django static files"
     depends_on:
       frontend-build:
@@ -92,7 +92,7 @@ processes:
     log_location: "./logs/collectstatic.log"
 
   migrate:
-    command: "ENV_FILE=.env python manage.py migrate"
+    command: "python manage.py migrate"
     description: "Run database migrations"
     depends_on:
       postgres:
@@ -104,7 +104,7 @@ processes:
     log_location: "./logs/migrate.log"
 
   django:
-    command: "ENV_FILE=.env python manage.py runserver localhost:8001"
+    command: "python manage.py runserver localhost:8001"
     description: "Django development server"
     depends_on:
       postgres:
