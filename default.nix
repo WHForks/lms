@@ -47,10 +47,19 @@ let
     inherit src frontendAssets compiledMessages;
     pythonEnv = productionEnv;
   };
+  databaseWithMigrations = pkgs.callPackage ./nix/migrate.nix {
+    inherit src;
+    pythonEnv = productionEnv;
+  };
 in
 {
   packages = {
-    inherit frontendAssets compiledMessages staticAssets;
+    inherit
+      frontendAssets
+      compiledMessages
+      staticAssets
+      databaseWithMigrations
+      ;
     docker = pkgs.callPackage ./nix/docker.nix {
       inherit
         src
@@ -60,6 +69,14 @@ in
         ;
     };
   };
+
+  checks = {
+    pytest = pkgs.callPackage ./nix/pytest.nix {
+      inherit src databaseWithMigrations;
+      pythonEnv = pythonBase;
+    };
+  };
+
   shell = pkgs.mkShell {
     packages = [
       pythonBase

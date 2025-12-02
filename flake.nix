@@ -16,8 +16,11 @@
             value = f system;
           }) systems
         );
+      attrForEachSystem =
+        attr: forEachSystem (system: (import ./default.nix { inherit system; })."${attr}");
     in
     {
-      packages = forEachSystem (system: (import ./default.nix { inherit system; }).packages);
+      checks = attrForEachSystem "checks";
+      packages = attrForEachSystem "packages";
     };
 }
