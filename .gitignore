@@ -40,7 +40,6 @@ dist/
 result
 .python-env
 .envrc
-flake.nix
 flake.lock
 
 frontend/.yarn
