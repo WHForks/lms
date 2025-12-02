@@ -9,13 +9,8 @@
   staticAssets,
 
   uwsgi,
-  bash,
-  coreutils,
-  findutils,
-  gnugrep,
-  gnused,
+  busybox,
   postgresql,
-  git,
   gosu,
   gettext,
   shadow,
@@ -26,6 +21,7 @@ let
   uwsgi-py = uwsgi.override {
     python3 = productionEnv;
     plugins = [ "python3" ];
+    withSystemd = false;
   };
 
   pythonVersionShort = builtins.substring 0 4 productionEnv.python.version;
@@ -48,17 +44,12 @@ dockerTools.buildLayeredImage {
   tag = "latest";
 
   contents = [
-    bash
-    coreutils
-    findutils
-    gnugrep
-    gnused
+    busybox
 
     productionEnv
     uwsgi-py
 
-    postgresql
-    git
+    postgresql.lib
     gosu
     gettext
     cacert

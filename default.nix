@@ -23,10 +23,11 @@ let
   project = pyproject-nix.lib.project.loadPyproject {
     projectRoot = ./.;
   };
+  packageOverrides = import ./nix/overrides.nix {
+    inherit (pkgs) fetchFromGitHub;
+  };
   python = pkgs.python312.override {
-    packageOverrides = import ./nix/overrides.nix {
-      inherit (pkgs) fetchFromGitHub;
-    };
+    inherit packageOverrides;
   };
   pythonBase = python.withPackages (
     project.renderers.withPackages {
