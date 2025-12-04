@@ -3,9 +3,7 @@
 {% block title %}{{ course.meta_course.name }}, {{ course.semester }}{% endblock title %}
 {% block body_attrs %} data-init-sections="courseDetails"{% endblock body_attrs %}
 
-{% block javascripts %}
-  {% if user.is_curator %}{{ render_bundle('supervising', config='V1') }}{% endif %}
-{% endblock javascripts %}
+{% block javascripts %}{% endblock javascripts %}
 
 {% set user = request.user %}
 

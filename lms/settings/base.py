@@ -18,7 +18,7 @@ with warnings.catch_warnings():
 
 ROOT_DIR = Path(__file__).parents[2]
 ROOT_URLCONF = 'lms.urls'
-SHARED_APPS_DIR = ROOT_DIR / "apps"
+SHARED_APPS_DIR = ROOT_DIR / "lms" / "apps"
 
 SITE_ID = env.int("SITE_ID", default=None)
 
@@ -111,17 +111,21 @@ STATIC_ROOT = env.str("DJANGO_STATIC_ROOT", default=str(ROOT_DIR / "static"))
 STATIC_URL = "/static/"
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
-WEBPACK_ENVIRONMENT = env.str("WEBPACK_ENVIRONMENT", default="prod")
+LOCAL_BUILD = env.bool("LOCAL_BUILD", default=False)
+WEBPACK_ENVIRONMENT = env.str("WEBPACK_ENVIRONMENT", default="local" if LOCAL_BUILD else "prod")
 WEBPACK_LOADER = {
     "V1": {
-        "BUNDLE_DIR_NAME": f"v1/dist/{WEBPACK_ENVIRONMENT}/",  # relative to the ASSETS_ROOT
+        # relative to ASSETS_ROOT
+        "BUNDLE_DIR_NAME": f"v1/dist/{WEBPACK_ENVIRONMENT}/",
         "STATS_FILE": str(
             WEBPACK_ASSETS_ROOT
             / "v1"
             / "dist"
             / WEBPACK_ENVIRONMENT
-            / "webpack-stats-v1.json"
+            / ".vite"
+            / "manifest.json"
         ),
+        "LOADER_CLASS": "core.webpack_loader.ViteManifestLoader",
     },
 }
 

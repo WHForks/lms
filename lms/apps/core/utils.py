@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional
 from urllib.parse import parse_qs, urlparse
 
 import bleach
-import hoep as h
+import mistune
 import sqids.constants
 from django.conf import settings
 from django.core.cache import InvalidCacheBackendError, caches
@@ -19,6 +19,8 @@ from django.utils import formats
 from django.utils.html import linebreaks, strip_tags
 from django_jinja.builtins.extensions import make_template_fragment_key
 from sqids import Sqids
+
+import core.math
 
 logger = logging.getLogger(__name__)
 
@@ -36,18 +38,9 @@ class Empty(enum.Enum):
 
 _empty = Empty.token
 
-# Some details here https://github.com/Anomareh/Hoep
-MARKDOWN_EXTENSIONS = (h.EXT_FENCED_CODE |
-                       h.EXT_AUTOLINK |
-                       h.EXT_STRIKETHROUGH |
-                       h.EXT_TABLES |
-                       h.EXT_QUOTE |
-                       h.EXT_NO_INTRA_EMPHASIS |
-                       h.EXT_SPACE_HEADERS |
-                       h.EXT_MATH |
-                       h.EXT_MATH_EXPLICIT)
-MARKDOWN_RENDER_FLAGS = 0
-markdown = h.Hoep(MARKDOWN_EXTENSIONS, MARKDOWN_RENDER_FLAGS)
+markdown = mistune.create_markdown(
+    plugins=["strikethrough", "table", "url", "footnotes", core.math.math]
+)
 
 # This is not really about markdown, This is about html tags that will be
 # saved after markdown rendering
@@ -98,7 +91,7 @@ MARKDOWN_ALLOWED_ATTRS = {
 
 def render_markdown(text):
     """Renders markdown, then sanitizes html based on allowed tags"""
-    md_rendered = markdown.render(text)
+    md_rendered = markdown(text)
     return bleach.clean(md_rendered, tags=MARKDOWN_ALLOWED_TAGS,
                         attributes=MARKDOWN_ALLOWED_ATTRS)
 
@@ -123,8 +116,8 @@ def admin_datetime(dt: datetime.datetime) -> str:
 
 """
 Transliteration for cyrillic alphabet. Used LC ICAO doc 9303 as a reference.
-Soft sign is ignored by this recommendation, we intentionally ignore this 
-symbol since it's not valid for CN values in LDAP accounts. Common Name used 
+Soft sign is ignored by this recommendation, we intentionally ignore this
+symbol since it's not valid for CN values in LDAP accounts. Common Name used
 as a branch name in `gerrit` code review system.
 """
 _ru_en_mapping = {

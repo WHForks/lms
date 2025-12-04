@@ -152,10 +152,10 @@ class JbaService:
             if task.id not in solved_task_ids:
                 continue
             if task.section_sequential_number is not None:
-                line = f'{task.section_sequential_number}\.'
+                line = f'{task.section_sequential_number}\\.'
             else:
                 line = ''
-            line += f'{task.lesson_sequential_number}\.{task.task_sequential_number}\. {task.name} '
+            line += f'{task.lesson_sequential_number}\\.{task.task_sequential_number}\\. {task.name} '
             lines.append(line)
         solved_tasks = '<br>'.join(lines)
         res = f'**Total tasks**: {len(jba_course_tasks)}\n\n'

@@ -47,12 +47,14 @@ function updateAssigneeModeAdditionSettings(mode) {
 
 let addButton = document.querySelector("#add-form");
 let bucketsContainer = document.querySelector("#buckets-formset")
-let emptyForm = document.querySelector("#buckets-empty-form").firstElementChild
+let emptyForm = document.querySelector("#buckets-empty-form")?.firstElementChild
 let totalFormsInput = document.querySelector("#id_bucket-TOTAL_FORMS");
 
-addButton.addEventListener('click', addBucket);
-for (let formIndex=0; formIndex < totalFormsInput.value; formIndex++) {
+if (addButton) {
+  addButton.addEventListener('click', addBucket);
+  for (let formIndex = 0; formIndex < totalFormsInput.value; formIndex++) {
     connectClearFillButtons(`bucket-${formIndex}`)
+  }
 }
 
 function connectClearFillButtons(formPrefix) {

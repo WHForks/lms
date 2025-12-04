@@ -22,7 +22,7 @@ const MESSAGE = {
   preloadError: 'Ошибка инициализации',
 };
 
-let imageData = photoAppProps.photo;
+let imageData = photoAppProps?.photo;
 
 let photoValidation = {
   minWidth: 250,
@@ -305,10 +305,10 @@ function restoreTab(targetTab) {
   }
 }
 
-const throttledFetchConnectedAccounts = _throttle(fetchConnectedAccounts, 1000, {
+const throttledFetchConnectedAccounts = templates.upload? _throttle(fetchConnectedAccounts, 1000, {
   leading: true,
   trailing: false,
-});
+}):undefined;
 
 function initConnectedAccountsTab(targetTab) {
   if (!window.__CSC__.socialAccountsApp.isEnabled) {

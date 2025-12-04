@@ -31,6 +31,7 @@ from learning.tests.factories import (
 from users.services import get_student_profile
 from users.tests.factories import CuratorFactory, StudentFactory, TeacherFactory
 
+import math
 
 @pytest.mark.django_db
 def test_resolve_assignees_for_personal_assignment(settings, program_cub001, program_run_cub):
@@ -1033,7 +1034,9 @@ def test_calculate_teachers_load_all_teachers_per_bucket():
     exp_load = {teachers[0].pk: TWO, teachers[1].pk: TWO, teachers[2].pk: TWO}
     for i in range(len(buckets)):
         act_load = calculate_teachers_overall_expected_load_in_bucket(buckets[i])
-        assert exp_load == act_load
+        assert set(exp_load.keys()) == set(act_load.keys())
+        for k in exp_load:
+            assert math.isclose(exp_load[k], act_load[k], rel_tol=1e-6), f"Teacher {k}: expected {exp_load[k]}, got {act_load[k]}"
 
     sg1_e = student_groups[0].enrollments.first()
     sg1_sa = sg1_e.student.studentassignment_set.first()

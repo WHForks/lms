@@ -10,6 +10,7 @@ media/
 apps/coverage/
 .idea/
 .vscode/
+.zed/
 csc3/
 static/
 local/
@@ -19,6 +20,7 @@ local/
 coverage_html/
 .coverage
 .env
+.env.local
 docker-compose.override.yml
 # TODO: replace public/ with submodule, add to ignore here
 *-debug.log
@@ -32,8 +34,13 @@ docker-compose.override.yml
 
 node_modules/
 dist/
+/data
 
 .direnv/
+result
+.python-env
 .envrc
-flake.nix
 flake.lock
+
+frontend/.yarn
+logs/
