@@ -1,3 +1,8 @@
+# JetBrains Academy Learning Management System
+
+[![built with nix](https://builtwithnix.org/badge.svg)](https://builtwithnix.org)
+[![built with garnix](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fgarnix.io%2Fapi%2Fbadges%2FWHForks%2Flms)](https://garnix.io/repo/WHForks/lms)
+
 ## Local Development Setup
 
 These instructions mostly repeat the process scripted in the [Dockerfile](docker-files/Dockerfile), with some minor adjustments for the local development.
