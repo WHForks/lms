@@ -34,10 +34,37 @@ function applyStoredTheme() {
     const root = document.documentElement;
     if (stored === "dark") {
       root.setAttribute("data-theme", "dark");
-    } else {
+    } else if (stored === "light") {
       root.removeAttribute("data-theme");
+    } else {
+      const prefersDark =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (prefersDark) {
+        root.setAttribute("data-theme", "dark");
+      } else {
+        root.removeAttribute("data-theme");
+      }
     }
   } catch (e) {
+    // ignore storage errors
+  }
+}
+
+function handleSystemThemeChange(e) {
+  try {
+    const stored =
+      window.localStorage && window.localStorage.getItem(THEME_STORAGE_KEY);
+    // Only sync with system if user hasn't manually set a theme
+    if (!stored) {
+      const root = document.documentElement;
+      if (e.matches) {
+        root.setAttribute("data-theme", "dark");
+      } else {
+        root.removeAttribute("data-theme");
+      }
+    }
+  } catch (err) {
     // ignore storage errors
   }
 }
@@ -64,6 +91,16 @@ function toggleTheme() {
 
 $(document).ready(function () {
   applyStoredTheme();
+
+  // Sync with system theme changes unless user has manually set a preference
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  if (media && media.addEventListener) {
+    media.addEventListener("change", handleSystemThemeChange);
+  } else if (media && media.addListener) {
+    // Safari/older browsers
+    media.addListener(handleSystemThemeChange);
+  }
+
   configureCSRFAjax();
   displayNotifications();
   renderText();
