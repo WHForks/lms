@@ -185,10 +185,8 @@ h4.no-top-margin {
   margin-top: 0 !important;
 }
 
-
 body {
   margin-bottom: 90px;
-  /* min-height: 100%; */
 }
 
 html {
@@ -196,12 +194,33 @@ html {
   min-height: 100%;
 }
 
+/* Dark theme footer overrides */
+html[data-theme="dark"] {
+  .footer {
+    background-color: $dark-surface;
+    border-top-color: $dark-border;
+    color: $dark-text-muted;
+
+    .social a {
+      color: $dark-text-muted;
+
+      &:hover {
+        color: $dark-link-hover;
+      }
+    }
+  }
+
+  body.gray {
+    background-color: $dark-bg;
+    color: $dark-text;
+  }
+}
+
 .footer {
   position: absolute;
   bottom: 0;
   width: 100%;
-  min-width: 940px;
-  margin-bottom: 0;
+
   background-color: $background-grey;
   border-top: 1px solid $color-gray-90;
   line-height: 60px;

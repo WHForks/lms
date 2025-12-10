@@ -25,7 +25,45 @@ import { launch as launchSolution } from "learning/solution";
 
 const CSC = window.__CSC__;
 
+const THEME_STORAGE_KEY = "csc-theme";
+
+function applyStoredTheme() {
+  try {
+    const stored =
+      window.localStorage && window.localStorage.getItem(THEME_STORAGE_KEY);
+    const root = document.documentElement;
+    if (stored === "dark") {
+      root.setAttribute("data-theme", "dark");
+    } else {
+      root.removeAttribute("data-theme");
+    }
+  } catch (e) {
+    // ignore storage errors
+  }
+}
+
+function toggleTheme() {
+  const root = document.documentElement;
+  const isDark = root.getAttribute("data-theme") === "dark";
+  const next = isDark ? "light" : "dark";
+
+  if (next === "dark") {
+    root.setAttribute("data-theme", "dark");
+  } else {
+    root.removeAttribute("data-theme");
+  }
+
+  try {
+    if (window.localStorage) {
+      window.localStorage.setItem(THEME_STORAGE_KEY, next);
+    }
+  } catch (e) {
+    // ignore storage errors
+  }
+}
+
 $(document).ready(function () {
+  applyStoredTheme();
   configureCSRFAjax();
   displayNotifications();
   renderText();
@@ -85,6 +123,12 @@ $(document).ready(function () {
       showComponentError(error);
     }
   }
+
+  const themeToggles = document.querySelectorAll(".js-theme-toggle");
+
+  themeToggles.forEach((btn) => {
+    btn.addEventListener("click", toggleTheme);
+  });
 
   loadReactApplications();
 });

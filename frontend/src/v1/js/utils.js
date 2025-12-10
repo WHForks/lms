@@ -19,9 +19,14 @@ export function getTemplate(id) {
   return template(document.getElementById(id)?.innerHTML??"");
 }
 
-export function createNotification(msg, theme = 'default', options = {}) {
-  const opts = { position: 'bottom-right', ...options };
-  $.jGrowl(msg, { theme: theme, ...opts });
+export function createNotification(msg, theme = "default", options = {}) {
+  const opts = { position: "bottom-right", ...options };
+
+  if (typeof $.jGrowl === "function") {
+    $.jGrowl(msg, { theme: theme, ...opts });
+  } else {
+    console.error("Notification:", theme, msg);
+  }
 }
 
 export function showComponentError(error, msg = 'An error occurred while loading the component') {

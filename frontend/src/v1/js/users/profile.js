@@ -4,7 +4,8 @@ import _throttle from 'lodash-es/throttle';
 
 import { createNotification, getCSRFToken, getTemplate } from 'utils';
 
-const photoAppProps = window.__CSC__.photoApp;
+const photoAppProps =
+  window.__CSC__ && window.__CSC__.photoApp ? window.__CSC__.photoApp : {};
 
 const templates = {
   upload: getTemplate('templateUpload'),
@@ -22,7 +23,8 @@ const MESSAGE = {
   preloadError: 'Ошибка инициализации',
 };
 
-let imageData = photoAppProps?.photo;
+let imageData =
+  photoAppProps && photoAppProps.photo ? photoAppProps.photo : null;
 
 let photoValidation = {
   minWidth: 250,
@@ -58,7 +60,7 @@ const modalBody = $('.modal-body', uploadContainer);
 
 let fn = {
   initPhotoUploaderAndCropper: function () {
-    if (photoAppProps.userID === undefined) {
+    if (!photoAppProps || photoAppProps.userID === undefined) {
       return;
     }
 
