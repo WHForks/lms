@@ -4,6 +4,81 @@
 {% block content %}
   <div class="container">
     {{ crispy(filter_form) }}
+    
+    <script>
+      (function() {
+        // Wait for jQuery to be available (bundled scripts load after this inline script)
+        function whenJQuery(cb) {
+          if (window.jQuery) return cb(window.jQuery);
+          var maxTries = 50;
+          var tries = 0;
+          var iv = setInterval(function() {
+            if (window.jQuery) {
+              clearInterval(iv);
+              return cb(window.jQuery);
+            }
+            tries += 1;
+            if (tries >= maxTries) {
+              clearInterval(iv);
+            }
+          }, 50);
+        }
+
+        whenJQuery(function($) {
+          // Restore saved filters and hook into form submission
+          var savedFilters = {{ saved_filters | tojson }};
+          if (savedFilters && Object.keys(savedFilters).length > 0) {
+            for (var key in savedFilters) {
+              if (!savedFilters.hasOwnProperty(key)) continue;
+              var elements = $('[name="' + key + '"]');
+              if (elements.length === 0) continue;
+              var values = Array.isArray(savedFilters[key]) ? savedFilters[key] : [savedFilters[key]];
+              elements.each(function() {
+                var el = $(this);
+                if (el.attr('type') === 'checkbox') {
+                  var isChecked = values.indexOf(el.val()) !== -1;
+                  el.prop('checked', isChecked).closest('label').toggleClass('active', isChecked);
+                } else if (el.is('select')) {
+                  el.val(values.length === 1 ? values[0] : values);
+                }
+                el.trigger('change');
+              });
+            }
+          }
+
+          // Hook into form submission to save filters
+          var form = $('form:has([type="submit"])').first();
+          if (form.length === 0) return;
+
+          form.on('submit', function(e) {
+            e.preventDefault();
+            var postData = form.serializeArray();
+            var csrfToken = $('[name="csrfmiddlewaretoken"]').val();
+            postData.push({name: 'csrfmiddlewaretoken', value: csrfToken});
+            var queryParams = new URLSearchParams();
+            $.each(postData, function(i, field) {
+              if (field.name !== 'csrfmiddlewaretoken') {
+                queryParams.append(field.name, field.value);
+              }
+            });
+
+            $.ajax({
+              url: '{{ url("staff:save_student_faces_filters") }}',
+              method: 'POST',
+              data: $.param(postData),
+              dataType: 'json',
+              contentType: 'application/x-www-form-urlencoded',
+              success: function() {
+                window.location.href = window.location.pathname + '?' + queryParams.toString();
+              },
+              error: function() {
+                form.off('submit').submit();
+              }
+            });
+          });
+        });
+      })();
+    </script>
 
     <a href="{{ request.get_full_path() }}&print=Y" target="_blank">Print version</a>
 
