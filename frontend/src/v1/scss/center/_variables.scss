@@ -5,7 +5,7 @@ $min-width: 980px;
 $pre-bg: #f8f8f8;
 
 $color-white: #fff;
-$color-blue: #19191C;
+$color-blue: #19191c;
 //$color-blue: #4078c0;
 $color-grey: #9b9b9b;
 $color-orange: #f2a654;
@@ -40,8 +40,8 @@ $alert-info-text: $color-gray-20;
 $state-success-text: $color-green;
 $state-danger-text: $color-red;
 
-$alert-warning-border: rgba(255, 243, 230, .8);
-$alert-warning-bg: rgba(255, 243, 230, .8);
+$alert-warning-border: rgba(255, 243, 230, 0.8);
+$alert-warning-bg: rgba(255, 243, 230, 0.8);
 $alert-warning-text: $color-orange;
 
 $panel-default-heading-bg: $background-grey;
@@ -52,20 +52,426 @@ $panel-footer-bg: inherit;
 $panel-inner-border: transparent;
 
 $header-lvl1-bg: #303033;
-$header-lvl1-active: #6B57FF;
-
+$header-lvl1-active: #6b57ff;
 
 $border-radius-base: 3px;
 $border-radius-large: 3px;
 $border-radius-small: 3px;
 
-$font-family-sans-serif: "JetBrains Sans", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Droid Sans", "Helvetica Neue", Arial, sans-serif;
-$font-family-monospace: "JetBrains Mono Variable", ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace", "Source Code Pro", "Fira Mono", "Droid Sans Mono", "Courier New", monospace;
+$font-family-sans-serif:
+  "JetBrains Sans",
+  Inter,
+  system-ui,
+  -apple-system,
+  BlinkMacSystemFont,
+  "Segoe UI",
+  Roboto,
+  Oxygen,
+  Ubuntu,
+  Cantarell,
+  "Droid Sans",
+  "Helvetica Neue",
+  Arial,
+  sans-serif;
+$font-family-monospace:
+  "JetBrains Mono Variable", ui-monospace, Menlo, Monaco, "Cascadia Mono",
+  "Segoe UI Mono", "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace",
+  "Source Code Pro", "Fira Mono", "Droid Sans Mono", "Courier New", monospace;
 $font-family-base: $font-family-sans-serif;
 
 $font-size-base: 16px;
 $font-size-large: ceil(($font-size-base * 1.25));
-$font-size-small: ceil(($font-size-base * .85));
+$font-size-small: ceil(($font-size-base * 0.85));
 
-$link-color: #3D4ACE;
+$link-color: #3d4ace;
 $link-hover-color: darken($link-color, 15%);
+
+// JetBrains New Dark palette (from intellij-newui.json)
+$dark-bg: #1e1f22;
+$dark-surface: #2b2d30;
+$dark-toolbar-bg: #1e1f22;
+$dark-border: #393b40;
+$dark-border-variant: #43454a;
+
+$dark-text: #dfe1e5;
+$dark-text-muted: #9da0a8;
+$dark-text-placeholder: #5a5d63;
+
+$dark-icon: #bcbec4;
+$dark-icon-accent: #6b9bfa;
+$dark-link-hover: #6b9bfa;
+
+$dark-element-bg: #5a5d634d;
+
+$dark-element-hover: #5a5d6366;
+
+$dark-element-active: #5a5d6399;
+
+$dark-error: #db5c5c;
+$dark-warning: #f2c55c;
+$dark-success: #42b1a4;
+
+// Theme toggle button styles for the header profile bar
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 8px;
+  border-radius: 16px;
+  border: 1px solid $color-gray-90;
+  background-color: transparent;
+  color: $color-gray-48;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  vertical-align: middle;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+}
+
+// User profile account table (black/grey in dark theme)
+
+html[data-theme="dark"] {
+  .accounts,
+  #for-curator-tab {
+    .table {
+      background-color: $dark-surface;
+
+      color: $dark-text;
+
+      // Header cells, if present
+      > thead > tr > th {
+        background-color: $dark-toolbar-bg;
+        border-color: $dark-border;
+        color: $dark-text;
+      }
+
+      // Body cells
+      > tbody > tr > td {
+        border-color: $dark-border;
+
+        // First column: labels ("Phone", "Workplace", etc.) in muted grey
+        &:first-child {
+          color: $dark-text-muted;
+          width: 1%;
+          white-space: nowrap;
+        }
+
+        // Second column: values in normal text color
+        &:last-child {
+          color: $dark-text;
+        }
+      }
+
+      // Zebra striping stays subtle dark greys
+      &.table-striped > tbody > tr:nth-of-type(odd) {
+        background-color: $dark-bg;
+      }
+
+      &.table-striped > tbody > tr:nth-of-type(even) {
+        background-color: $dark-surface;
+      }
+
+      // Links inside the table (GitHub, LinkedIn, iCal, etc.)
+      a {
+        color: $link-color;
+
+        &:hover {
+          color: $dark-link-hover;
+        }
+      }
+    }
+  }
+
+  // Profile tabs container (General / For managers / etc.) in dark theme
+
+  .profile-additional-info {
+    background: $dark-bg;
+
+    .nav-tabs-inverse {
+      .nav-tabs {
+        background-color: $dark-bg;
+        border-bottom-color: $dark-border;
+
+        li {
+          &.active a,
+          &.active a:focus,
+          &.active a:hover {
+            background-color: $dark-surface;
+            color: $dark-text;
+          }
+
+          a {
+            background-color: transparent;
+            color: $dark-text-muted;
+
+            &:hover {
+              background-color: lighten($dark-toolbar-bg, 5%);
+              color: $dark-link-hover;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+.theme-toggle:hover {
+  background-color: lighten($background-grey, 3%);
+  border-color: darken($color-gray-90, 5%);
+}
+
+.theme-toggle:active {
+  background-color: lighten($background-grey, 6%);
+  transform: translateY(1px);
+}
+
+.theme-toggle__icon {
+  font-size: 16px;
+  line-height: 1;
+  display: none;
+}
+
+// Light theme by default: show sun icon
+html:not([data-theme="dark"]) .theme-toggle__icon--sun {
+  display: inline;
+}
+
+// Dark theme: show moon icon
+html[data-theme="dark"] .theme-toggle__icon--moon {
+  display: inline;
+}
+
+// Dark theme overrides for header/menu/profile area
+
+html[data-theme="dark"] {
+  body {
+    background-color: $dark-bg;
+
+    color: $dark-text;
+  }
+
+  a {
+    color: lighten($link-color, 25%);
+
+    &:hover {
+      color: $dark-link-hover;
+    }
+  }
+
+  // Generic form controls (inline forms, filters, search, etc.)
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  input[type="url"],
+  input[type="tel"],
+  textarea,
+  select,
+  .form-control {
+    background-color: $dark-surface;
+
+    border-color: $dark-border;
+
+    color: $dark-text;
+
+    &::placeholder {
+      color: $dark-text-placeholder;
+    }
+
+    &:focus {
+      border-color: $dark-border-variant;
+
+      box-shadow: 0 0 0 1px $dark-border-variant;
+    }
+  }
+
+  .input-group-addon {
+    background-color: $dark-surface;
+
+    border-color: $dark-border;
+
+    color: $dark-text-muted;
+  }
+
+  .header {
+    .menu.lvl1 {
+      background-color: $dark-toolbar-bg;
+
+      color: $dark-text;
+
+      li {
+        &:hover,
+        &.active {
+          background-color: lighten($dark-toolbar-bg, 5%);
+        }
+      }
+    }
+
+    .menu.lvl2 {
+      background-color: $dark-surface;
+
+      border-bottom-color: $dark-border;
+
+      a {
+        color: $dark-text-muted;
+
+        &:hover {
+          color: $dark-link-hover;
+        }
+      }
+
+      li.active a {
+        color: $dark-text;
+      }
+    }
+  }
+
+  // Cards and panels used in staff pages (e.g. course participants intersection)
+
+  .card,
+  .panel,
+  .panel-default {
+    background-color: $dark-surface;
+
+    border-color: $dark-border;
+
+    color: $dark-text;
+
+    .panel-heading,
+    .card-header {
+      background-color: $dark-toolbar-bg;
+
+      border-bottom-color: $dark-border;
+
+      color: $dark-text;
+    }
+
+    .panel-body {
+      background-color: $dark-surface;
+
+      color: $dark-text;
+    }
+  }
+
+  // List groups (used on staff exports page)
+  .list-group {
+    .list-group-item {
+      background-color: $dark-surface;
+      border-color: $dark-border;
+      color: $dark-text;
+
+      &.list-group-item-heading,
+      .list-group-item-heading {
+        color: $dark-text;
+      }
+
+      table {
+        background-color: $dark-surface;
+        color: $dark-text;
+
+        th,
+        td {
+          border-color: $dark-border;
+        }
+      }
+    }
+  }
+
+  #login {
+    .dropdown-menu {
+      background-color: $dark-surface;
+
+      border-color: $dark-border;
+
+      color: $dark-text;
+    }
+
+    .dropdown-header {
+      color: $dark-text-muted;
+    }
+
+    .dropdown-menu > li > a {
+      color: $dark-text;
+
+      &:hover {
+        background-color: lighten($dark-surface, 5%);
+
+        color: $dark-link-hover;
+      }
+    }
+  }
+
+  .members-area-link {
+    color: lighten($link-color, 15%);
+
+    &:hover {
+      color: $dark-link-hover;
+    }
+  }
+
+
+
+  .theme-toggle {
+    border-color: $dark-border;
+    background-color: $dark-surface;
+    color: $dark-icon;
+
+    &:hover {
+      background-color: $dark-element-hover;
+      border-color: $dark-border-variant;
+    }
+
+    &:active {
+      background-color: $dark-element-active;
+    }
+  }
+
+  // Buttons (including inline filters like academic year and student search toggles)
+
+  .btn,
+  .btn-default,
+  .btn-primary,
+  .btn-success,
+  .btn-warning,
+  .btn-danger,
+  .btn-info {
+    background-color: $dark-element-bg;
+
+    border-color: $dark-border;
+
+    color: $dark-text;
+
+    &:hover,
+    &:focus {
+      background-color: $dark-element-hover;
+
+      border-color: $dark-border-variant;
+
+      color: $dark-text;
+    }
+
+    &:active,
+    &.active {
+      background-color: $dark-element-active;
+
+      border-color: $dark-border-variant;
+
+      color: $dark-text;
+    }
+
+    &.disabled,
+    &[disabled] {
+      opacity: 0.6;
+    }
+  }
+}

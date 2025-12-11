@@ -22,6 +22,14 @@
         </div>
         <div class="menu-right" id="login" data-user-id="{{ user.pk|default("") }}">
             {% if user.is_authenticated %}
+                <button
+                    type="button"
+                    class="theme-toggle js-theme-toggle"
+                    aria-label="{% trans %}Toggle dark mode{% endtrans %}"
+                >
+                    <span class="theme-toggle__icon theme-toggle__icon--sun">☀</span>
+                    <span class="theme-toggle__icon theme-toggle__icon--moon">🌙</span>
+                </button>
                 <div class="dropdown">
                   <a href="#" id="user-menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                       {%- with im = user.get_thumbnail("60x60", use_stub=True) -%}

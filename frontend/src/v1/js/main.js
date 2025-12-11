@@ -25,7 +25,82 @@ import { launch as launchSolution } from "learning/solution";
 
 const CSC = window.__CSC__;
 
+const THEME_STORAGE_KEY = "csc-theme";
+
+function applyStoredTheme() {
+  try {
+    const stored =
+      window.localStorage && window.localStorage.getItem(THEME_STORAGE_KEY);
+    const root = document.documentElement;
+    if (stored === "dark") {
+      root.setAttribute("data-theme", "dark");
+    } else if (stored === "light") {
+      root.removeAttribute("data-theme");
+    } else {
+      const prefersDark =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (prefersDark) {
+        root.setAttribute("data-theme", "dark");
+      } else {
+        root.removeAttribute("data-theme");
+      }
+    }
+  } catch (e) {
+    // ignore storage errors
+  }
+}
+
+function handleSystemThemeChange(e) {
+  try {
+    const stored =
+      window.localStorage && window.localStorage.getItem(THEME_STORAGE_KEY);
+    // Only sync with system if user hasn't manually set a theme
+    if (!stored) {
+      const root = document.documentElement;
+      if (e.matches) {
+        root.setAttribute("data-theme", "dark");
+      } else {
+        root.removeAttribute("data-theme");
+      }
+    }
+  } catch (err) {
+    // ignore storage errors
+  }
+}
+
+function toggleTheme() {
+  const root = document.documentElement;
+  const isDark = root.getAttribute("data-theme") === "dark";
+  const next = isDark ? "light" : "dark";
+
+  if (next === "dark") {
+    root.setAttribute("data-theme", "dark");
+  } else {
+    root.removeAttribute("data-theme");
+  }
+
+  try {
+    if (window.localStorage) {
+      window.localStorage.setItem(THEME_STORAGE_KEY, next);
+    }
+  } catch (e) {
+    // ignore storage errors
+  }
+}
+
 $(document).ready(function () {
+  applyStoredTheme();
+
+  // Sync with system theme changes unless user has manually set a preference
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  if (media && media.addEventListener) {
+    media.addEventListener("change", handleSystemThemeChange);
+  } else if (media && media.addListener) {
+    // Safari/older browsers
+    media.addListener(handleSystemThemeChange);
+  }
+
   configureCSRFAjax();
   displayNotifications();
   renderText();
@@ -85,6 +160,12 @@ $(document).ready(function () {
       showComponentError(error);
     }
   }
+
+  const themeToggles = document.querySelectorAll(".js-theme-toggle");
+
+  themeToggles.forEach((btn) => {
+    btn.addEventListener("click", toggleTheme);
+  });
 
   loadReactApplications();
 });
