@@ -45,6 +45,9 @@ urlpatterns = [
 if not settings.USE_CLOUD_STORAGE:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
 # Placing this urls under `admin` namespace needs a lot of customization
 if apps.is_installed('django_rq'):
     urlpatterns += [path('narnia/django-rq/', include('django_rq.urls'))]
