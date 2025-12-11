@@ -6,6 +6,9 @@
       <div class="col-xs-12 h2-and-buttons">
         <h2>{% trans %}Student search{% endtrans %}</h2>
         <div class="btn-toolbar">
+          <div class="btn-group">
+            <button id="reset-filters-btn" class="btn btn-default btn-sm" type="button">{% trans %}Reset filters{% endtrans %}</button>
+          </div>
         </div>
         <hr>
       </div>
@@ -117,4 +120,98 @@
   </div>
 {% endblock content %}
 
-{% block javascripts %}{% endblock javascripts %}
+{% block javascripts %}
+  <script>
+    // Run after other scripts attach listeners (jQuery ready)
+    (function($){
+      $(function(){
+        try {
+          var saved = {{ saved_filters|default('null') | tojson }};
+          if (!saved) return;
+          var form = document.querySelector('.user-search');
+          if (!form) return;
+          Object.keys(saved).forEach(function(k){
+            var v = saved[k];
+            if (v === null || typeof v === 'undefined') return;
+            var els = form.querySelectorAll('[name="' + k + '"]');
+            if (!els || els.length === 0) return;
+            // Single text input
+            if (els.length === 1 && (els[0].tagName === 'INPUT' && els[0].type === 'text')) {
+              els[0].value = v;
+              // notify any listeners
+              $(els[0]).trigger('input');
+              return;
+            }
+            var vals = Array.isArray(v) ? v.map(String) : [String(v)];
+            els.forEach(function(el){
+              if (el.type === 'checkbox' || el.type === 'radio') {
+                var shouldBeChecked = vals.indexOf(String(el.value)) !== -1;
+                // Set checked state
+                el.checked = shouldBeChecked;
+                // Update Bootstrap button group active class on the label
+                var label = el.closest('label');
+                if (label) {
+                  if (shouldBeChecked) {
+                    $(label).addClass('active');
+                  } else {
+                    $(label).removeClass('active');
+                  }
+                }
+                // Trigger event so frontend listeners update their state
+                $(el).trigger('change');
+              } else {
+                el.value = vals.join(',');
+                // notify any listeners
+                $(el).trigger('input');
+              }
+            });
+          });
+        } catch (e) {
+          /* best-effort: don't break page */
+          console && console.error && console.error('restore saved filters', e);
+        }
+      });
+    })(window.jQuery || window.$);
+  </script>
+  <script>
+    (function($){
+      function getCookie(name) {
+        var match = document.cookie.match(new RegExp('(^|; )' + name + '=([^;]+)'));
+        return match ? decodeURIComponent(match[2]) : null;
+      }
+
+      $(function(){
+        var btn = $('#reset-filters-btn');
+        if (!btn.length) return;
+        btn.on('click', function(e){
+          e.preventDefault();
+          var csrftoken = getCookie('csrftoken');
+          $.ajax({
+            url: '{{ url("staff:reset_student_search_filters") }}',
+            method: 'POST',
+            headers: {'X-CSRFToken': csrftoken},
+            success: function(){
+              try {
+                var form = document.querySelector('.user-search');
+                if (form) {
+                  // clear text inputs
+                  form.querySelectorAll('input[type="text"]').forEach(function(i){ i.value = ''; $(i).trigger('input'); });
+                  // uncheck checkboxes and remove active classes
+                  form.querySelectorAll('input[type="checkbox"]').forEach(function(cb){ cb.checked = false; var lbl = cb.closest('label'); if (lbl) $(lbl).removeClass('active'); $(cb).trigger('change'); });
+                }
+              } catch (e) {
+                console && console.error && console.error('reset filters cleanup', e);
+              }
+              // Redirect to base student search page (no query params)
+              window.location.href = '{{ url("staff:student_search") }}';
+            },
+            error: function(){
+              // fallback: redirect to base page
+              window.location.href = '{{ url("staff:student_search") }}';
+            }
+          });
+        });
+      });
+    })(window.jQuery || window.$);
+  </script>
+{% endblock javascripts %}

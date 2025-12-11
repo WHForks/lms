@@ -13,7 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from markupsafe import Markup
 from model_utils.fields import AutoCreatedField, AutoLastModifiedField
 
-from core.db.fields import TimeZoneField
+from core.db.fields import TimeZoneField, PrettyJSONField
 from core.db.models import ConfigurationModel
 from core.timezone import TimezoneAwareMixin
 from core.urls import reverse
@@ -226,6 +226,29 @@ class Location(TimezoneAwareMixin, models.Model):
 
     def get_absolute_url(self):
         return reverse('courses:venue_detail', args=[self.pk])
+
+
+class SavedFilter(models.Model):
+    """Per-user saved filter/preset stored as JSON.
+
+    By design this stores one saved entry per (user, target). If multiple
+    presets are needed later, extend schema (add slug/name and remove
+    unique constraint).
+    """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='saved_filters')
+    target = models.CharField(max_length=150, db_index=True,
+                              help_text="Identifier of filter target, e.g. 'staff:student_search' or 'StudentFilter'")
+    data = PrettyJSONField(blank=True, default=dict)
+    is_public = models.BooleanField(default=False)
+    created = AutoCreatedField()
+    modified = AutoLastModifiedField()
+
+    class Meta:
+        unique_together = (('user', 'target'),)
+        db_table = 'core_saved_filters'
+
+    def __str__(self):
+        return f"SavedFilter user={self.user_id} target={self.target}"
 
 
 class University(models.Model):

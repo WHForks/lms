@@ -5,6 +5,70 @@
 {% block content %}
   <div class="container">
     {{ crispy(filter_form) }}
+    
+    <script>
+      (function() {
+        // Restore saved filters and hook into form submission
+        
+        // 1. Restore filter values on page load
+        var savedFilters = {{ saved_filters | tojson }};
+        if (savedFilters && Object.keys(savedFilters).length > 0) {
+          for (var key in savedFilters) {
+            if (!savedFilters.hasOwnProperty(key)) continue;
+            
+            var elements = jQuery('[name="' + key + '"]');
+            if (elements.length === 0) continue;
+            
+            var values = Array.isArray(savedFilters[key]) ? savedFilters[key] : [savedFilters[key]];
+            
+            elements.each(function() {
+              var el = jQuery(this);
+              if (el.attr('type') === 'checkbox') {
+                var isChecked = values.indexOf(el.val()) !== -1;
+                el.prop('checked', isChecked).closest('label').toggleClass('active', isChecked);
+              } else if (el.is('select')) {
+                el.val(values.length === 1 ? values[0] : values);
+              }
+              el.trigger('change');
+            });
+          }
+        }
+        
+        // 2. Hook into Apply button to save filters
+        var form = jQuery('[name="apply"]').closest('form');
+        if (form.length === 0) return;
+        
+        form.on('submit', function(e) {
+          e.preventDefault();
+          
+          var postData = form.serializeArray();
+          var csrfToken = jQuery('[name="csrfmiddlewaretoken"]').val();
+          postData.push({name: 'csrfmiddlewaretoken', value: csrfToken});
+          
+          var queryParams = new URLSearchParams();
+          jQuery.each(postData, function(i, field) {
+            if (field.name !== 'csrfmiddlewaretoken' && field.name !== 'apply') {
+              queryParams.append(field.name, field.value);
+            }
+          });
+          
+          jQuery.ajax({
+            url: '{{ url("study:save_assignment_filters") }}',
+            method: 'POST',
+            data: jQuery.param(postData),
+            dataType: 'json',
+            contentType: 'application/x-www-form-urlencoded',
+            success: function() {
+              window.location.href = window.location.pathname + '?' + queryParams.toString();
+            },
+            error: function() {
+              form.off('submit').submit();
+            }
+          });
+        });
+      })();
+    </script>
+    
     {% if not assignment_list_open and not assignment_list_archive %}
       <div class="row">
         <div class="col-xs-3"></div>

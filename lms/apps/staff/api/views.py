@@ -10,20 +10,24 @@ from api.permissions import CuratorAccessPermission
 from auth.mixins import RolePermissionRequiredMixin
 from core.api.serializers import AcademicProgramRunSerializer
 from core.models import AcademicProgramRun
+from core.services import FilterAutoSaveMixin
 from learning.api.serializers import StudentProfileSerializer
 from users.filters import StudentFilter
 from users.models import StudentProfile
+import logging
+logger = logging.getLogger(__name__)
 
 
 class StudentOffsetPagination(LimitOffsetPagination):
     default_limit = 500
 
 
-class StudentSearchJSONView(ListAPIView):
+class StudentSearchJSONView(FilterAutoSaveMixin, ListAPIView):
     permission_classes = [CuratorAccessPermission]
     pagination_class = StudentOffsetPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_class = StudentFilter
+    filter_auto_save_target = "staff:student_search"
 
     class OutputSerializer(StudentProfileSerializer):
         class Meta(StudentProfileSerializer.Meta):

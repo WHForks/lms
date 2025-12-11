@@ -4,7 +4,8 @@ from django.views.generic.base import RedirectView
 from learning.study.views import (
     CalendarFullView, CalendarPersonalView, CourseListView,
     StudentAssignmentCommentCreateView, StudentAssignmentDetailView,
-    StudentAssignmentListView, StudentAssignmentSolutionCreateView, TimetableView
+    StudentAssignmentListView, StudentAssignmentSolutionCreateView, TimetableView,
+    SaveStudentAssignmentFiltersView
 )
 from learning.views import (
     AssignmentAttachmentDownloadView, AssignmentCommentAttachmentDownloadView
@@ -17,6 +18,7 @@ urlpatterns = [
     path('', RedirectView.as_view(pattern_name='study:assignment_list', permanent=False), name='learning_base'),
     path('assignments/', include([
         path('', StudentAssignmentListView.as_view(), name='assignment_list'),
+        path('save-filters/', SaveStudentAssignmentFiltersView.as_view(), name='save_assignment_filters'),
         path('<int:pk>/', StudentAssignmentDetailView.as_view(), name='student_assignment_detail'),
         path('<int:pk>/comments/', StudentAssignmentCommentCreateView.as_view(), name='assignment_comment_create'),
         path('<int:pk>/solutions/', StudentAssignmentSolutionCreateView.as_view(), name='assignment_solution_create'),
