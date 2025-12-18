@@ -2,17 +2,6 @@ from datetime import date
 from typing import Iterable, List
 from urllib import parse
 
-from django.shortcuts import redirect
-from isoweek import Week
-from vanilla import GenericModelView, TemplateView
-
-from django.contrib import messages
-from django.db import transaction
-from django.db.models import Prefetch, Q
-from django.http import HttpResponseBadRequest, HttpResponseRedirect
-from django.utils.translation import gettext_lazy as _
-from django.views import generic
-
 from auth.mixins import PermissionRequiredMixin
 from core import comment_persistence
 from core.exceptions import Redirect
@@ -24,30 +13,54 @@ from courses.models import Course, CourseProgramBinding, Semester
 from courses.selectors import course_teachers_prefetch_queryset
 from courses.utils import MonthPeriod, extended_month_date_range, get_current_term_pair
 from courses.views import MonthEventsCalendarView, WeekEventsView
+from django.contrib import messages
+from django.db import transaction
+from django.db.models import Prefetch, Q
+from django.http import HttpResponseBadRequest, HttpResponseRedirect, QueryDict
+from django.shortcuts import redirect
+from django.utils.translation import gettext_lazy as _
+from django.views import generic
 from info_blocks.constants import CurrentInfoBlockTags
 from info_blocks.models import InfoBlock
+from isoweek import Week
+from users.constants import Roles
+from users.models import StudentTypes
+from users.services import get_student_profile
+from vanilla import GenericModelView, TemplateView
+
 from learning import utils
 from learning.calendar import get_all_calendar_events, get_student_calendar_events
 from learning.models import Enrollment, StudentAssignment
 from learning.permissions import (
-    CreateAssignmentCommentAsLearner, CreateOwnAssignmentSolution,
-    EnrollOrLeavePermissionObject, ViewCourses, ViewOwnStudentAssignment,
-    ViewOwnStudentAssignments
+    CreateAssignmentCommentAsLearner,
+    CreateOwnAssignmentSolution,
+    EnrollOrLeavePermissionObject,
+    ViewCourses,
+    ViewOwnStudentAssignment,
+    ViewOwnStudentAssignments,
 )
 from learning.selectors import get_student_classes
 from learning.services.jba_service import JbaService, UnknownLanguage
 from learning.services.personal_assignment_service import (
-    get_assignment_update_history_message, get_draft_comment
+    get_assignment_update_history_message,
+    get_draft_comment,
 )
 from learning.study.forms import AssignmentCommentForm, StudentAssignmentListFilter
-from learning.study.services import get_solution_form, save_solution_form, get_current_semester_active_courses
+from learning.study.services import (
+    get_current_semester_active_courses,
+    get_solution_form,
+    save_solution_form,
+)
+from core.services import querydict_to_json, save_user_filter
+from core.models import SavedFilter
 from learning.views import AssignmentSubmissionBaseView
 from learning.views.views import (
-    AssignmentCommentUpsertView, StudentAssignmentURLParamsMixin
+    AssignmentCommentUpsertView,
+    StudentAssignmentURLParamsMixin,
 )
-from users.constants import Roles
-from users.models import StudentTypes
-from users.services import get_student_profile
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class CalendarFullView(PermissionRequiredMixin, MonthEventsCalendarView):
@@ -55,6 +68,7 @@ class CalendarFullView(PermissionRequiredMixin, MonthEventsCalendarView):
     Shows all non-course events and classes in the city of
     the authenticated student.
     """
+
     permission_required = "study.view_schedule"
 
     def get_events(self, month_period: MonthPeriod, **kwargs) -> Iterable:
@@ -62,8 +76,12 @@ class CalendarFullView(PermissionRequiredMixin, MonthEventsCalendarView):
         user = self.request.user
         student_profile = get_student_profile(user)
         programs = [student_profile.academic_program_enrollment.program]
-        return get_all_calendar_events(program_list=programs, start_date=start_date,
-                                       end_date=end_date, time_zone=user.time_zone)
+        return get_all_calendar_events(
+            program_list=programs,
+            start_date=start_date,
+            end_date=end_date,
+            time_zone=user.time_zone,
+        )
 
 
 class CalendarPersonalView(CalendarFullView):
@@ -71,6 +89,7 @@ class CalendarPersonalView(CalendarFullView):
     Shows non-course events filtered by student city and classes for courses
     on which authenticated student enrolled.
     """
+
     calendar_type = "student"
     template_name = "lms/courses/calendar.html"
 
@@ -79,13 +98,14 @@ class CalendarPersonalView(CalendarFullView):
         student_profile = get_student_profile(self.request.user)
         if not student_profile:
             return []
-        return get_student_calendar_events(student_profile=student_profile,
-                                           start_date=start_date,
-                                           end_date=end_date)
+        return get_student_calendar_events(
+            student_profile=student_profile, start_date=start_date, end_date=end_date
+        )
 
 
 class TimetableView(PermissionRequiredMixin, WeekEventsView):
     """Shows classes for courses which authorized student enrolled in"""
+
     template_name = "lms/learning/timetable.html"
     permission_required = "study.view_schedule"
 
@@ -99,97 +119,159 @@ class TimetableView(PermissionRequiredMixin, WeekEventsView):
 
 class StudentAssignmentListView(PermissionRequiredMixin, TemplateView):
     """Shows assignments for the current term."""
+
     template_name = "lms/study/assignment_list.html"
     permission_required = ViewOwnStudentAssignments.name
 
     def get_queryset(self, current_term):
         today = get_now_utc().date()
         left_enrollments = Enrollment.objects.filter(
-            student=self.request.user,
-            is_deleted=True,
-            course__completed_at__gt=today
+            student=self.request.user, is_deleted=True, course__completed_at__gt=today
         )
         left_courses = [e.course_id for e in left_enrollments]
-        return (StudentAssignment.objects
-                .for_student(self.request.user)
-                .filter(assignment__course__completed_at__gt=today)
-                .exclude(assignment__course__pk__in=left_courses)
-                .order_by('assignment__deadline_at',
-                          'assignment__course__meta_course__name',
-                          'pk'))
+        return (
+            StudentAssignment.objects.for_student(self.request.user)
+            .filter(assignment__course__completed_at__gt=today)
+            .exclude(assignment__course__pk__in=left_courses)
+            .order_by(
+                "assignment__deadline_at", "assignment__course__meta_course__name", "pk"
+            )
+        )
 
-    def get_context_data(self, filter_form: StudentAssignmentListFilter,
-                         enrolled_in_courses: List[int],
-                         current_term: Semester, **kwargs):
+    def get_context_data(
+        self,
+        filter_form: StudentAssignmentListFilter,
+        enrolled_in_courses: List[int],
+        current_term: Semester,
+        **kwargs,
+    ):
         student = self.request.user
         filter_course = kwargs.get("course", None)
         filter_formats = kwargs.get("formats", [])
         filter_statuses = kwargs.get("statuses", [])
         assignment_list = filter(
-            lambda sa:
-            (filter_course is None or sa.assignment.course_id == filter_course) and
-            (not filter_formats or sa.assignment.submission_type in filter_formats) and
-            (not filter_statuses or sa.status in filter_statuses),
-            self.get_queryset(current_term)
+            lambda sa: (
+                filter_course is None or sa.assignment.course_id == filter_course
+            )
+            and (not filter_formats or sa.assignment.submission_type in filter_formats)
+            and (not filter_statuses or sa.status in filter_statuses),
+            self.get_queryset(current_term),
         )
         in_progress, archive = utils.split_on_condition(
             assignment_list,
-            lambda sa: not sa.assignment.deadline_is_exceeded and
-                       sa.assignment.course_id in enrolled_in_courses)
+            lambda sa: not sa.assignment.deadline_is_exceeded
+            and sa.assignment.course_id in enrolled_in_courses,
+        )
         archive.reverse()
+        
+        # Load saved filters for this user
+        saved_filters = {}
+        if student.is_authenticated:
+            try:
+                saved_filters = SavedFilter.objects.get(
+                    user=student, target="learning:student_assignments"
+                ).data
+            except SavedFilter.DoesNotExist:
+                pass
+        
         context = {
-            'filter_form': filter_form,
-            'assignment_list_open': in_progress,
-            'assignment_list_archive': archive,
-            'tz_override': student.time_zone,
-            'ViewOwnStudentAssignment': ViewOwnStudentAssignment,
+            "filter_form": filter_form,
+            "assignment_list_open": in_progress,
+            "assignment_list_archive": archive,
+            "tz_override": student.time_zone,
+            "ViewOwnStudentAssignment": ViewOwnStudentAssignment,
+            "saved_filters": saved_filters,
         }
         return context
 
     def get(self, request, *args, **kwargs):
+        from django.conf import settings
+        
         current_term = Semester.get_current()
         enrolled_in = get_current_semester_active_courses(request.user, current_term)
-        filter_form = StudentAssignmentListFilter(enrolled_in, data=request.GET)
+        
+        # Load saved filters if no URL params provided
+        request_data = request.GET
+        if len(request.GET) == 0 and request.user.is_authenticated:
+            try:
+                saved_data = SavedFilter.objects.get(
+                    user=request.user, target="learning:student_assignments"
+                ).data
+                
+                # Convert saved data to QueryDict for form processing
+                qd = QueryDict('', mutable=True)
+                for k, v in saved_data.items():
+                    if isinstance(v, list):
+                        for item in v:
+                            qd.appendlist(k, str(item))
+                    elif v:
+                        qd[k] = str(v)
+                request_data = qd
+            except SavedFilter.DoesNotExist:
+                pass
+        
+        filter_form = StudentAssignmentListFilter(enrolled_in, data=request_data)
+        
         filter_formats, filter_statuses, filter_course = [], [], None
         if filter_form.is_valid():
             filter_formats = filter_form.cleaned_data["format"]
             filter_statuses = filter_form.cleaned_data["status"]
             filter_course = filter_form.cleaned_data["course"]
-        context = self.get_context_data(filter_form=filter_form,
-                                        enrolled_in_courses=enrolled_in,
-                                        current_term=current_term,
-                                        course=filter_course,
-                                        formats=filter_formats,
-                                        statuses=filter_statuses,
-                                        **kwargs)
+        
+        context = self.get_context_data(
+            filter_form=filter_form,
+            enrolled_in_courses=enrolled_in,
+            current_term=current_term,
+            course=filter_course,
+            formats=filter_formats,
+            statuses=filter_statuses,
+            **kwargs,
+        )
         return self.render_to_response(context)
 
     def post(self, request, *args, **kwargs):
         current_term = Semester.get_current()
-        enrolled_in = get_current_semester_active_courses(request.user, Semester.get_current())
-        filter_form = StudentAssignmentListFilter(enrolled_in,
-                                                  data=request.POST)
+        enrolled_in = get_current_semester_active_courses(request.user, current_term)
+        filter_form = StudentAssignmentListFilter(enrolled_in, data=request.POST)
         filter_course = None
+        
         if filter_form.is_valid():
             filter_course = filter_form.cleaned_data["course"]
             filter_formats = filter_form.cleaned_data["format"]
             filter_statuses = filter_form.cleaned_data["status"]
-            url = reverse('study:assignment_list')
-            params = parse.urlencode({
-                'course': [] if filter_course is None else filter_course,
-                'format': filter_formats,
-                'status': filter_statuses
-            }, doseq=True)
+            
+            # Save filters for the current user
+            if request.user.is_authenticated:
+                save_user_filter(
+                    user=request.user,
+                    target="learning:student_assignments",
+                    data=querydict_to_json(request.POST),
+                )
+            
+            # Redirect with filter params in URL
+            url = reverse("study:assignment_list")
+            params = parse.urlencode(
+                {
+                    "course": filter_course or [],
+                    "format": filter_formats,
+                    "status": filter_statuses,
+                },
+                doseq=True,
+            )
             return redirect(f"{url}?{params}")
-        context = self.get_context_data(filter_form=filter_form,
-                                        enrolled_in_courses=enrolled_in,
-                                        current_term=current_term,
-                                        course=filter_course, **kwargs)
+        context = self.get_context_data(
+            filter_form=filter_form,
+            enrolled_in_courses=enrolled_in,
+            current_term=current_term,
+            course=filter_course,
+            **kwargs,
+        )
         return self.render_to_response(context)
 
 
-class StudentAssignmentDetailView(PermissionRequiredMixin,
-                                  AssignmentSubmissionBaseView):
+class StudentAssignmentDetailView(
+    PermissionRequiredMixin, AssignmentSubmissionBaseView
+):
     template_name = "lms/study/student_assignment_detail.html"
     permission_required = ViewOwnStudentAssignment.name
 
@@ -212,25 +294,31 @@ class StudentAssignmentDetailView(PermissionRequiredMixin,
         sa = self.student_assignment
         draft_comment = get_draft_comment(self.request.user, self.student_assignment)
         comment_form = AssignmentCommentForm(instance=draft_comment)
-        add_comment_url = reverse('study:assignment_comment_create',
-                                  kwargs={'pk': sa.pk})
+        add_comment_url = reverse(
+            "study:assignment_comment_create", kwargs={"pk": sa.pk}
+        )
         comment_form.helper.form_action = add_comment_url
         # Format datetime in student timezone
-        context['comment_form'] = comment_form
-        context['time_zone'] = self.request.user.time_zone
-        context['solution_form'] = get_solution_form(sa)
-        context['get_score_status_changing_message'] = get_assignment_update_history_message
+        context["comment_form"] = comment_form
+        context["time_zone"] = self.request.user.time_zone
+        context["solution_form"] = get_solution_form(sa)
+        context["get_score_status_changing_message"] = (
+            get_assignment_update_history_message
+        )
         if sa.assignment.submission_type == AssignmentFormat.JBA:
             jba_course_id = sa.assignment.jba_course_id
             try:
-                context['jba_course'] = JbaService.get_course_info(jba_course_id)
+                context["jba_course"] = JbaService.get_course_info(jba_course_id)
             except UnknownLanguage as e:
-                context['jba_error'] = _('Unknown programming language "{}"').format(e.language)
+                context["jba_error"] = _('Unknown programming language "{}"').format(
+                    e.language
+                )
         return context
 
 
-class StudentAssignmentCommentCreateView(PermissionRequiredMixin,
-                                         AssignmentCommentUpsertView):
+class StudentAssignmentCommentCreateView(
+    PermissionRequiredMixin, AssignmentCommentUpsertView
+):
     permission_required = CreateAssignmentCommentAsLearner.name
 
     def get_permission_object(self):
@@ -245,31 +333,35 @@ class StudentAssignmentCommentCreateView(PermissionRequiredMixin,
         return self.student_assignment.get_student_url()
 
 
-class StudentAssignmentSolutionCreateView(PermissionRequiredMixin,
-                                          StudentAssignmentURLParamsMixin,
-                                          GenericModelView):
+class StudentAssignmentSolutionCreateView(
+    PermissionRequiredMixin, StudentAssignmentURLParamsMixin, GenericModelView
+):
     permission_required = CreateOwnAssignmentSolution.name
 
     def get_permission_object(self):
         return self.student_assignment
 
     def form_invalid(self, form):
-        msg = "<br>".join("<br>".join(errors)
-                          for errors in form.errors.values())
+        msg = "<br>".join("<br>".join(errors) for errors in form.errors.values())
         messages.error(self.request, "Unable to save data.<br>" + msg)
         redirect_to = self.student_assignment.get_student_url()
         return HttpResponseRedirect(redirect_to)
 
     def post(self, request, *args, **kwargs):
-        solution_form = get_solution_form(self.student_assignment, data=request.POST,
-                                          files=request.FILES)
+        solution_form = get_solution_form(
+            self.student_assignment, data=request.POST, files=request.FILES
+        )
         if solution_form is None:
-            return HttpResponseBadRequest("Assignment format doesn't support this method")
+            return HttpResponseBadRequest(
+                "Assignment format doesn't support this method"
+            )
         if solution_form.is_valid():
             with transaction.atomic():
-                submission = save_solution_form(form=solution_form,
-                                                personal_assignment=self.student_assignment,
-                                                created_by=request.user)
+                submission = save_solution_form(
+                    form=solution_form,
+                    personal_assignment=self.student_assignment,
+                    created_by=request.user,
+                )
             if submission.text:
                 comment_persistence.add_to_gc(submission.text)
             msg = _("Solution successfully saved")
@@ -279,28 +371,62 @@ class StudentAssignmentSolutionCreateView(PermissionRequiredMixin,
         return self.form_invalid(solution_form)
 
 
+class SaveStudentAssignmentFiltersView(PermissionRequiredMixin, generic.View):
+    """AJAX endpoint to save assignment list filters."""
+    
+    permission_required = ViewOwnStudentAssignments.name
+    
+    def post(self, request, *args, **kwargs):
+        from django.http import JsonResponse
+        from django.conf import settings
+        
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Not authenticated"}, status=401)
+        
+        try:
+            filter_data = querydict_to_json(request.POST)
+            
+            save_user_filter(
+                user=request.user,
+                target="learning:student_assignments",
+                data=filter_data,
+            )
+            
+            return JsonResponse({"success": True, "message": "Filters saved"})
+        except Exception as e:
+            logger.exception("[AssignmentFilters] Error saving assignment filters")
+            return JsonResponse(
+                {"error": str(e)}, status=500
+            )
+
+
 class CourseListView(PermissionRequiredMixin, generic.TemplateView):
     model = Course
-    context_object_name = 'course_list'
+    context_object_name = "course_list"
     template_name = "lms/study/course_list.html"
     permission_required = ViewCourses.name
 
     def get_context_data(self, **kwargs):
         auth_user = self.request.user
-        student_enrollments = (Enrollment.active
-                               .filter(student_id=auth_user)
-                               .select_related("course")
-                               .only('id', 'grade', 'course_id'))
+        student_enrollments = (
+            Enrollment.active.filter(student_id=auth_user)
+            .select_related("course")
+            .only("id", "grade", "course_id")
+        )
         student_enrollments = {e.course_id: e for e in student_enrollments}
         # Get courses with ongoing enrollment from the user's program,
         # courses in this term available via invitation
         # and all courses that student enrolled in
         student_profile = get_student_profile(auth_user)
         qs = Course.objects.filter(id__in=list(student_enrollments))
-        courses_pk = [ci.course_id for ci in (CourseProgramBinding
-                                              .objects
-                                              .student_can_enroll_by_invitation(student_profile)
-                                              .only('course_id'))]
+        courses_pk = [
+            ci.course_id
+            for ci in (
+                CourseProgramBinding.objects.student_can_enroll_by_invitation(
+                    student_profile
+                ).only("course_id")
+            )
+        ]
         qs |= Course.objects.filter(id__in=courses_pk)
         if (
             student_profile.type != StudentTypes.INVITED
@@ -309,13 +435,15 @@ class CourseListView(PermissionRequiredMixin, generic.TemplateView):
             qs |= Course.objects.student_can_enroll_from_program(student_profile)
         if student_profile.type == StudentTypes.ALUMNI:
             qs |= Course.objects.alumni_can_enroll()
-        prefetch_teachers = Prefetch('course_teachers',
-                                     queryset=course_teachers_prefetch_queryset())
-        courses = (qs
-                   .select_related('meta_course', 'semester')
-                   .distinct()
-                   .order_by('-semester__index', 'meta_course__name', 'pk')
-                   .prefetch_related(prefetch_teachers))
+        prefetch_teachers = Prefetch(
+            "course_teachers", queryset=course_teachers_prefetch_queryset()
+        )
+        courses = (
+            qs.select_related("meta_course", "semester")
+            .distinct()
+            .order_by("-semester__index", "meta_course__name", "pk")
+            .prefetch_related(prefetch_teachers)
+        )
         # Group collected courses
         ongoing_enrolled, ongoing_rest, archive = [], [], []
         current_term = get_current_term_pair(auth_user.time_zone)
@@ -333,7 +461,7 @@ class CourseListView(PermissionRequiredMixin, generic.TemplateView):
             "ongoing_enrolled": ongoing_enrolled,
             "archive": archive,
             "current_term": current_term.label.capitalize(),
-            "EnrollOrLeavePermissionObject": EnrollOrLeavePermissionObject
+            "EnrollOrLeavePermissionObject": EnrollOrLeavePermissionObject,
         }
         return context
 
@@ -343,6 +471,6 @@ class ProgramsView(generic.ListView):
     template_name = "learning/study/programs.html"
 
     def get_queryset(self):
-        return (InfoBlock.objects
-                .with_tag(CurrentInfoBlockTags.PROGRAMS)
-                .order_by("sort"))
+        return InfoBlock.objects.with_tag(CurrentInfoBlockTags.PROGRAMS).order_by(
+            "sort"
+        )

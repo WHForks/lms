@@ -1,8 +1,10 @@
 import datetime
+import logging
+from urllib import parse
 
 from django.conf import settings
 from django.db.models import Prefetch
-from django.http import HttpResponseBadRequest, HttpResponseRedirect
+from django.http import HttpResponseBadRequest, HttpResponseRedirect, JsonResponse, QueryDict
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from django.views import View, generic
@@ -12,8 +14,9 @@ from rest_framework import serializers
 from vanilla import TemplateView
 
 import core.utils
-from core.models import University, AcademicProgram
+from core.models import University, AcademicProgram, SavedFilter
 from core.reports import dataframe_to_response
+from core.services import FilterAutoSaveMixin, querydict_to_json, save_user_filter
 from core.urls import reverse
 from courses.constants import SemesterTypes
 from courses.models import Course, Semester
@@ -32,11 +35,14 @@ from users.filters import StudentFilter
 from users.mixins import CuratorOnlyMixin
 from users.models import StudentProfile, StudentTypes
 
+logger = logging.getLogger(__name__)
 
-class StudentSearchCSVView(CuratorOnlyMixin, BaseFilterView):
+
+class StudentSearchCSVView(FilterAutoSaveMixin, CuratorOnlyMixin, BaseFilterView):
     context_object_name = "applicants"
     model = StudentProfile
     filterset_class = StudentFilter
+    filter_auto_save_target = "staff:student_search"
 
     def get_queryset(self):
         return StudentProfile.objects.select_related("user")
@@ -61,12 +67,30 @@ class StudentSearchCSVView(CuratorOnlyMixin, BaseFilterView):
         return dataframe_to_response(df, "csv", file_name)
 
 
-class StudentSearchView(CuratorOnlyMixin, TemplateView):
+class StudentSearchView(FilterAutoSaveMixin, CuratorOnlyMixin, TemplateView):
     template_name = "lms/staff/student_search.html"
+    filter_auto_save_target = "staff:student_search"
+    filterset_class = StudentFilter
 
     def get_context_data(self, **kwargs):
+        # Load saved filter state (if any) for the authenticated user so the
+        # template can pre-fill inputs after a page refresh.
+        saved_data = None
+        try:
+            if getattr(self.request, 'user', None) and self.request.user.is_authenticated:
+                from core.models import SavedFilter
+                try:
+                    obj = SavedFilter.objects.filter(user=self.request.user, target='staff:student_search').first()
+                    if obj:
+                        saved_data = obj.data or {}
+                except Exception:
+                    saved_data = None
+        except Exception:
+            saved_data = None
+
         context = {
             "json_api_uri": reverse("staff:student_search_json"),
+            "saved_filters": saved_data,
             "admission_years": (
                 StudentProfile.objects.filter(year_of_admission__isnull=False)
                 .values_list("year_of_admission", flat=True)
@@ -81,6 +105,20 @@ class StudentSearchView(CuratorOnlyMixin, TemplateView):
             "is_paid_basis": [("1", "Yes"), ("0", "No")],
         }
         return context
+
+
+class ResetStudentSearchFiltersView(CuratorOnlyMixin, View):
+    """Endpoint to reset saved filters for student search for current user."""
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Not authenticated"}, status=401)
+        try:
+            SavedFilter.objects.filter(user=request.user, target='staff:student_search').delete()
+            return JsonResponse({"status": "ok"})
+        except Exception:
+            logger.exception("[StudentSearch] Failed to delete saved filter")
+            return JsonResponse({"error": "failed"}, status=500)
 
 
 class ExportsView(CuratorOnlyMixin, generic.TemplateView):
@@ -186,27 +224,85 @@ class StudentFacesView(CuratorOnlyMixin, TemplateView):
         assert len(universities) > 0
         serializer = self.InputSerializer(data=request.GET)
         serializer.fields["university"].choices = [(b.pk, b.name) for b in universities]
-        if not serializer.initial_data:
+        
+        # Load saved filters if no URL params provided
+        if not request.GET and request.user.is_authenticated:
+            try:
+                saved_data = SavedFilter.objects.get(
+                    user=request.user, target="staff:student_faces"
+                ).data
+                
+                # Redirect to same page with saved params in URL
+                params = parse.urlencode(saved_data, doseq=True)
+                return HttpResponseRedirect(f"{request.path}?{params}")
+            except SavedFilter.DoesNotExist:
+                pass
+        
+        # Use defaults if no params and no saved filters
+        if not request.GET:
             university = universities[0]
             current_term = get_current_term_pair(university.city.get_timezone())
             url = f"{request.path}?university={university.pk}&year={current_term.year}&type={StudentTypes.REGULAR}"
             return HttpResponseRedirect(url)
-        # Filterset knows how to validate input data but we plan to use this
-        # serializer for the future api view
-        serializer.is_valid(raise_exception=False)
+        
         filter_set = StudentProfileFilter(
-            universities, data=self.request.GET, queryset=self.get_queryset()
+            universities, data=request.GET, queryset=self.get_queryset()
         )
         context = self.get_context_data(filter_set, **kwargs)
         return self.render_to_response(context)
 
     def get_context_data(self, filter_set: FilterSet, **kwargs):
+        # Load saved filters for this user
+        saved_filters = {}
+        if self.request.user.is_authenticated:
+            try:
+                saved_filters = SavedFilter.objects.get(
+                    user=self.request.user, target="staff:student_faces"
+                ).data
+                
+                from django.conf import settings
+                if settings.DEBUG:
+                    logger.debug(
+                        "[StudentFaces] Loaded saved filters for user %s keys=%s",
+                        self.request.user.pk,
+                        list(saved_filters.keys()),
+                    )
+            except SavedFilter.DoesNotExist:
+                pass
+        
         context = {
             "filter_form": filter_set.form,
             "users": [x.user for x in filter_set.qs],
             "StudentStatuses": StudentStatuses,
+            "saved_filters": saved_filters,
         }
         return context
+
+    def post(self, request, *args, **kwargs):
+        from django.conf import settings
+        
+        universities = University.objects.all()
+        filter_set = StudentProfileFilter(
+            universities, data=request.POST, queryset=self.get_queryset()
+        )
+        
+        if filter_set.is_valid():
+            # Save filters for the current user
+            if request.user.is_authenticated:
+                filter_data = querydict_to_json(request.POST)
+                
+                save_user_filter(
+                    user=request.user,
+                    target="staff:student_faces",
+                    data=filter_data,
+                )
+            
+            # Redirect to same page with filter params
+            params = request.POST.urlencode()
+            return HttpResponseRedirect(f"{request.path}?{params}")
+        
+        context = self.get_context_data(filter_set, **kwargs)
+        return self.render_to_response(context)
 
     def get_queryset(self):
         qs = StudentProfile.objects.select_related("user").order_by(
@@ -215,6 +311,27 @@ class StudentFacesView(CuratorOnlyMixin, TemplateView):
         if "print" in self.request.GET:
             qs = qs.exclude(status__in=StudentStatuses.inactive_statuses)
         return qs
+
+
+class SaveStudentFacesFiltersView(CuratorOnlyMixin, View):
+    """AJAX endpoint to save student faces filters."""
+    
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Not authenticated"}, status=401)
+        
+        try:
+            filter_data = querydict_to_json(request.POST)
+            
+            save_user_filter(
+                user=request.user,
+                target="staff:student_faces",
+                data=filter_data,
+            )
+            return JsonResponse({"status": "ok"})
+        except Exception as e:
+            logger.exception("[StudentFaces] Error saving filters")
+            return JsonResponse({"error": "Failed to save filters"}, status=500)
 
 
 class CourseParticipantsIntersectionView(CuratorOnlyMixin, generic.TemplateView):
